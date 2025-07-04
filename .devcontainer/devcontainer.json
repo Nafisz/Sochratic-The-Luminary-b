@@ -1,0 +1,23 @@
+{
+  "name": "NovaX Dev",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:20",
+  "features": {
+    "ghcr.io/devcontainers/features/docker-in-docker:2": {}
+  },
+  "postCreateCommand": "npm install",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "esbenp.prettier-vscode",
+        "prisma.prisma",
+        "dbaeumer.vscode-eslint",
+        "formulahendry.auto-close-tag",
+        "formulahendry.auto-rename-tag"
+      ]
+    }
+  },
+  "forwardPorts": [3000, 6379, 5432, 6333],
+  "portsAttributes": {
+    "3000": { "label": "API", "onAutoForward": "openPreview" }
+  }
+}
