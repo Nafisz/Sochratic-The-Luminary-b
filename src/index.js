@@ -12,6 +12,7 @@ dotenv.config();
 const app = express();
 const prisma = new PrismaClient();
 const redisClient = redis.createClient({ url: process.env.REDIS_URL });
+const loginRoutes = require('./routes/loginRoutes');
 
 app.use(cors());
 app.use(express.json());
@@ -26,6 +27,7 @@ app.use('/user', userRoutes(prisma));
 app.use('/session', sessionRoutes(prisma, redisClient));
 app.use('/convert', aiRoutes);
 app.use('/exp', expRoutes(prisma));
+app.use('/login', loginRoutes(prisma));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {

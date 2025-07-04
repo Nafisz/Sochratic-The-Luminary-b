@@ -35,4 +35,4 @@ module.exports = (prisma) => {
   });
 
   return router;
-};
+}; 
