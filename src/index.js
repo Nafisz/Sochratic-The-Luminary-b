@@ -6,6 +6,7 @@ const redis = require('redis');
 const userRoutes = require('./routes/userRoutes');
 const sessionRoutes = require('./routes/sessionRoutes');
 const aiRoutes = require('./routes/aiRoutes');
+const expRoutes = require('./routes/expRoutes');
 
 dotenv.config();
 const app = express();
@@ -24,28 +25,9 @@ app.get('/', (req, res) => {
 app.use('/user', userRoutes(prisma));
 app.use('/session', sessionRoutes(prisma, redisClient));
 app.use('/convert', aiRoutes);
+app.use('/exp', expRoutes(prisma));
 
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`NovaX backend jalan di http://localhost:${PORT}`);
 });
-
-
-// === File: src/routes/userRoutes.js ===
-const express = require('express');
-
-module.exports = (prisma) => {
-  const router = express.Router();
-
-  router.post('/', async (req, res) => {
-    const { name, age } = req.body;
-    try {
-      const user = await prisma.user.create({ data: { name, age } });
-      res.json(user);
-    } catch (error) {
-      res.status(500).json({ error: 'Gagal menyimpan user.' });
-    }
-  });
-
-  return router;
-};

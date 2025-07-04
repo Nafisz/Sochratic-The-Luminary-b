@@ -7,7 +7,7 @@ async function aiService(conversation) {
     {
       model: 'gpt-4o',
       messages: [
-        { role: 'system', content: 'Konversi percakapan menjadi point berdasarkan element of thought' },
+        { role: 'system', content: 'Konversi percakapan menjadi point berdasarkan element of thought. Format hasil dalam JSON array: [{ element: "reasoning", value: 3 }, ...]' },
         { role: 'user', content: conversation }
       ]
     },
@@ -17,7 +17,7 @@ async function aiService(conversation) {
       }
     }
   );
-  return response.data.choices[0].message.content;
+  return JSON.parse(response.data.choices[0].message.content);
 }
 
 module.exports = aiService;
