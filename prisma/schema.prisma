@@ -1,26 +1,3 @@
-const axios = require('axios');
-require('dotenv').config();
-
-async function aiService(conversation) {
-  const response = await axios.post(
-    'https://api.openai.com/v1/chat/completions',
-    {
-      model: 'gpt-4o',
-      messages: [
-        { role: 'system', content: 'Konversi percakapan menjadi point berdasarkan element of thought. Format hasil dalam JSON array: [{ element: "reasoning", value: 3 }, ...]' },
-        { role: 'user', content: conversation }
-      ]
-    },
-    {
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`
-      }
-    }
-  );
-  return JSON.parse(response.data.choices[0].message.content);
-}
-
-module.exports = aiService;
 
 
 // === File: prisma/schema.prisma ===
@@ -55,4 +32,25 @@ model ExpPoint {
   value     Int
   session   Session  @relation(fields: [sessionId], references: [id])
   sessionId Int
+}
+
+model Topic {
+  id          String   @id @default(cuid())
+  title       String
+  emoji       String?
+  description String
+  content     String
+  difficulty  String
+  duration    String
+  themeType   String    // "Lesson" atau "Theme"
+  problems    Problem[]
+  createdAt   DateTime  @default(now())
+}
+
+model Problem {
+  id             String   @id @default(cuid())
+  text           String
+  expectedAnswer String?
+  topicId        String
+  topic          Topic    @relation(fields: [topicId], references: [id])
 }

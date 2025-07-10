@@ -21,3 +21,5 @@ async function aiService(conversation) {
 }
 
 module.exports = aiService;
+npx prisma generate
+npx prisma migrate dev --name add_topics_and_problems

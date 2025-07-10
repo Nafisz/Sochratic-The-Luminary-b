@@ -5,7 +5,7 @@ services:
     restart: always
     environment:
       POSTGRES_USER: novauser
-      POSTGRES_PASSWORD: novapass
+      POSTGRES_PASSWORD: novaxx
       POSTGRES_DB: novaxdb
     ports:
       - "5432:5432"
