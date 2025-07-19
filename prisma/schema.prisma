@@ -43,6 +43,8 @@ model Topic {
   content     String
   difficulty  String
   duration    String
+  subject     String?
+  stage       String
   themeType   String    // "Lesson" atau "Theme"
   problems    Problem[]
   createdAt   DateTime  @default(now())
@@ -52,7 +54,7 @@ model Topic {
 model Problem {
   id             String   @id @default(cuid())
   text           String
-  expectedAnswer String?
   topicId        String
+  firstquetion   String
   topic          Topic    @relation(fields: [topicId], references: [id])
 }
