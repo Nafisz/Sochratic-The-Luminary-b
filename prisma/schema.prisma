@@ -11,6 +11,7 @@ model User {
   id        Int      @id @default(autoincrement())
   name      String
   age       Int
+  email     String
   sessions  Session[]
 }
 
@@ -52,6 +53,6 @@ model Problem {
   id             String   @id @default(cuid())
   text           String
   topicId        String
-  firstquestion  String
+  firstQuestion  String
   topic          Topic    @relation(fields: [topicId], references: [id])
 }
