@@ -1,37 +1,39 @@
-// index.js  (final)
+// src/index.js  (final, 1-to-1 dengan struktur aktual)
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
-const dotenv = require('dotenv');
 const { PrismaClient } = require('@prisma/client');
-const { createClient } = require('redis');  // gunakan ioredis atau redis v4
-const userRoutes      = require('./routes/userRoutes');
-const sessionRoutes   = require('./routes/sessionRoutes');
-const aiRoutes        = require('./routes/aiRoutes');
-const expRoutes       = require('./routes/expRoutes');
-const loginRoutes     = require('./routes/loginRoutes');
+const { createClient } = require('redis');
 
-dotenv.config();
-const app  = express();
+// ── Import route-factories -----------------------------------------
+const authRoutes    = require('./routes/authRoutes');
+const chatRoutes    = require('./routes/chatRoutes');
+const expRoutes     = require('./routes/expRoutes');
+const sessionRoutes = require('./routes/sessionRoutes');
+const topicRoutes   = require('./routes/topicRoutes');
+
+// ── Instance setup ------------------------------------------------
+const app    = express();
 const prisma = new PrismaClient();
+const redis  = createClient({ url: process.env.REDIS_URL });
 
-// Redis v4
-const redisClient = createClient({ url: process.env.REDIS_URL });
-redisClient.connect().catch(console.error);
-
+// ── Middleware ----------------------------------------------------
 app.use(cors());
 app.use(express.json());
 
-// Health-check
-app.get('/', (req, res) => res.send('NovaX Backend Running'));
+// ── Connect Redis -------------------------------------------------
+redis.connect().catch(console.error);
 
-// Mount routes
-app.use('/user',    userRoutes(prisma, redisClient));
-app.use('/session', sessionRoutes(prisma, redisClient));
-app.use('/ai',      aiRoutes(prisma, redisClient));      // <-- ganti /convert → /ai
-app.use('/exp',     expRoutes(prisma, redisClient));      // <-- tambah redisClient
-app.use('/login',   loginRoutes(prisma, redisClient));
+// ── Health check --------------------------------------------------
+app.get('/', (_, res) => res.json({ status: 'NovaX Backend Running 🚀' }));
 
+// ── Mount routes --------------------------------------------------
+app.use('/api/auth',    authRoutes);
+app.use('/api/chat',    chatRoutes);
+app.use('/api/exp',     expRoutes);
+app.use('/api/session', sessionRoutes);
+app.use('/api/topic',   topicRoutes);
+
+// ── Boot ----------------------------------------------------------
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log(`NovaX backend jalan di http://localhost:${PORT}`);
-});
+app.listen(PORT, () => console.log(`✅ Server ready on http://localhost:${PORT}`));
