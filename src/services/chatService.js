@@ -1,4 +1,4 @@
-// chatService.js  — versi final tanpa duplikat system prompt
+// chatService.js  — versi yang menyimpan pertanyaan sistem ke Redis sekali di awal sesi
 
 const { Configuration, OpenAIApi } = require('openai');
 const prisma = require('../lib/prisma');
@@ -14,10 +14,7 @@ const openai = new OpenAIApi(configuration);
 async function handleUserMessage({ topicId, message, userId, sessionId }) {
   if (!sessionId) throw new Error('sessionId harus disediakan');
 
-  // 0️⃣  Simpan pesan user ke Redis
-  await appendChatMessage(sessionId, 'user', message);
-
-  // 1️⃣  Ambil topik & problem
+  // 0️⃣  Ambil data topik, problem, Active Recall (hanya sekali di awal)
   const topic = await prisma.topic.findUnique({
     where: { id: topicId },
     include: { problems: true }
@@ -26,37 +23,45 @@ async function handleUserMessage({ topicId, message, userId, sessionId }) {
 
   const firstQuestion = topic.problems[0]?.firstQuestion ?? 'Pertanyaan awal belum tersedia';
 
-  // 2️⃣  Ambil Active Recall
   const recall = await prisma.activeRecall.findFirst();
   const recallContent = recall
     ? `Active Recall:\n- ${recall.test1}\n- ${recall.test2}\n- ${recall.test3}\n- ${recall.test4}`
     : 'Belum ada data active recall.';
 
-  // 3️⃣  Ambil history chat
-  const historyRaw = await getChatHistory(sessionId);
-  const chatHistory = historyRaw.map(m => `${m.role}: ${m.content}`);
+  const systemMsg = `${recallContent}\n\nPertanyaan Awal: ${firstQuestion}`;
 
-  // 4️⃣  Bangun prompt otomatis lewat promptManager
+  // 1️⃣  Cek apakah ini pesan pertama di sesi
+  const historyRaw = await getChatHistory(sessionId);
+  const isFirstMessage = historyRaw.length === 0;
+
+  // 2️⃣  Jika pesan pertama, simpan konteks sistem ke Redis
+  if (isFirstMessage) {
+    await appendChatMessage(sessionId, 'system', systemMsg);
+  }
+
+  // 3️⃣  Simpan pesan user
+  await appendChatMessage(sessionId, 'user', message);
+
+  // 4️⃣  Ambil history terbaru (sudah termasuk system)
+  const chatHistory = (await getChatHistory(sessionId))
+    .filter(m => m.role !== 'system')   // biarkan promptManager menangani konteks system
+    .map(m => `${m.role}: ${m.content}`);
+
+  // 5️⃣  Bangun prompt otomatis lewat promptManager
   const promptText = buildPrompt(message, {
-    mode: 'DEFAULT',                       // atau 'JELASKAN_KONSEP' / 'MASUK_REALISASI'
+    mode: 'DEFAULT',                       // bisa diganti sesuai kebutuhan
     topic: topic.title,
     problem: topic.problems[0]?.text ?? '',
     chatHistory
   });
 
-  // 5️⃣  Susun messages untuk OpenAI (hanya 2 role: system & user)
+  // 6️⃣  Susun messages untuk OpenAI
   const messages = [
-    {
-      role: 'system',
-      content: `${recallContent}\n\nPertanyaan Awal: ${firstQuestion}`
-    },
-    {
-      role: 'user',
-      content: promptText
-    }
+    { role: 'system', content: systemMsg },
+    { role: 'user', content: promptText }
   ];
 
-  // 6️⃣  Kirim ke OpenAI
+  // 7️⃣  Kirim ke OpenAI
   const completion = await openai.createChatCompletion({
     model: 'gpt-4',
     messages,
@@ -65,10 +70,10 @@ async function handleUserMessage({ topicId, message, userId, sessionId }) {
 
   const reply = completion.data.choices[0].message.content;
 
-  // 7️⃣  Simpan balasan AI ke Redis
-  await appendChatMessage(sessionId, 'asisstant', reply);
+  // 8️⃣  Simpan balasan AI
+  await appendChatMessage(sessionId, 'assistant', reply);
 
-  // 8️⃣  Return (bersihkan tag)
+  // 9️⃣  Return (bersihkan tag)
   return reply.replace(/<.*?>/g, '');
 }
 
