@@ -29,7 +29,7 @@ router.post('/chat', async (req, res) => {
   await db.chat.create({ sessionId, sender: 'user', text: userMessage });
 
   // Ambil context
-  const session = await db.session.findUnique(...);
+  const session = await db.session.findUnique({ where: { id: sessionId } });
   const chatHistory = await redis.lrange(`chat:${sessionId}`, -10, -1);
 
   // Tentukan stage diskusi

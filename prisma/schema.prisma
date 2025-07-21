@@ -56,3 +56,10 @@ model Problem {
   firstQuestion  String
   topic          Topic    @relation(fields: [topicId], references: [id])
 }
+
+model ActiveRecall {
+  test1          String
+  test2          String
+  test3          String
+  test4          String
+}
