@@ -14,4 +14,4 @@ COPY . .
 WORKDIR /app/src
 
 # Jalankan app dari src/index.js
-CMD ["node", "index.js"]
+CMD ["node", "src/index.js"]

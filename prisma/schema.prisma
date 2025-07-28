@@ -28,27 +28,26 @@ model Session {
 }
 
 model ExpPoint {
-  id        Int      @id @default(autoincrement())
-  element   String
-  value     Int
-  session   Session  @relation(fields: [sessionId], references: [id])
-  sessionId Int
+  id          Int         @id @default(autoincrement())
+  session     Session     @relation(fields: [sessionId], references: [id])
+  sessionId   Int
+  type        PaulsIntel     // enum (clarity, creativity, context, dst.)
+  value       Int
+  comment     String?     // untuk evaluasi tambahan (misal insight AI atau user)
 }
 
-model Topic {
+model Course {
   id          String   @id @default(cuid())
   title       String
   emoji       String?
   description String
-  content     String
+  content     Topic[]
   difficulty  String
   duration    String
-  subject     String?
+  path        String?
   stage       String
   themeType   String    // "Lesson" atau "Theme"
-  problems    Problem[]
   createdAt   DateTime  @default(now())
-  session     Session[]
 }
 
 model Problem {
@@ -65,5 +64,56 @@ model ActiveRecall {
   test2          String
   test3          String
   test4          String
+}
+
+model Topic {
+  id             String   @id @default(cuid())
+  content        String
+  problems       Problem[]
+  session        Session[]
+  courseId       String
+  course         Course   @relation(fields: [courseId], references: [id])
+}
+
+enum PaulsIntel {
+  Clarity
+  Accuracy
+  Precision
+  Relevance
+  Depth
+  Breadth
+  Logic
+  Significance
+  Fairness
+}
+
+model PaulsIntelligenceLevel {
+  id            Int             @id @default(autoincrement())
+  type          PaulsIntel      // enum dari 9 jenis
+  level         Int
+  requiredExp   Int
+  rewardDesc    String?
+}
+
+
+model UserIntelProgress {
+  id        Int         @id @default(autoincrement())
+  user      User        @relation(fields: [userId], references: [id])
+  userId    Int
+  type      PaulsIntel
+  exp       Int         @default(0)
+  level     Int         @default(1)
+
+  @@unique([userId, type]) // biar tiap user hanya punya satu progres per jenis intel
+}
+
+model LevelHistory {
+  id            Int        @id @default(autoincrement())
+  userId        Int
+  type          PaulsIntel
+  oldLevel      Int
+  newLevel      Int
+  changedAt     DateTime   @default(now())
+  note          String?
 }
 
