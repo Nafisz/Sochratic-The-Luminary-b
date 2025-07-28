@@ -1,15 +1,30 @@
+// routes/topicRoutes.js
 const express = require('express');
-const router = express.Router();
-const topicService = require('../services/topicService'); // pastikan ini ada
+const topicService = require('../services/topicService');
 
-router.get('/topics', async (req, res) => {
-  const topics = await topicService.getAllTopics(); // ambil dari DB
-  res.json(topics);
-});
+module.exports = () => {
+  const router = express.Router();
 
-router.get('/topics/:id', async (req, res) => {
-  const topic = await topicService.getTopicById(req.params.id);
-  res.json(topic);
-});
+  router.get('/', async (_req, res) => {
+    try {
+      const topics = await topicService.getAllTopics();
+      res.json(topics);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Gagal memuat topik.' });
+    }
+  });
 
-module.exports = router;
+  router.get('/:id', async (req, res) => {
+    try {
+      const topic = await topicService.getTopicById(req.params.id);
+      if (!topic) return res.status(404).json({ error: 'Topik tidak ditemukan.' });
+      res.json(topic);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Gagal memuat detail topik.' });
+    }
+  });
+
+  return router;
+};

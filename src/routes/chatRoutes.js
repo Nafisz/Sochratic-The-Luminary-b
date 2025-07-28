@@ -1,64 +1,69 @@
-const express = require('express');
-const router = express.Router();
-const chatService = require('../services/chatService');
+// services/chatService.js
+const OpenAI = require('openai');
+const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+const { getChatHistory, appendChatMessage } = require('./chat-state');
+const { buildPrompt } = require('./promptManager');
+require('dotenv').config();
 
-// POST /api/chat
-router.post('/', async (req, res) => {
-  try {
-    const { topicId, message, userId } = req.body;
-    if (!topicId || !message) {
-      return res.status(400).json({ error: 'topicId and message required' });
-    }
-
-    const reply = await chatService.handleUserMessage({ topicId, message, userId });
-    res.json({ reply });
-  } catch (err) {
-    console.error('[Chat Error]', err);
-    res.status(500).json({ error: 'Internal server error' });
-  }
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
-module.exports = router;
+async function handleUserMessage({ topicId, message, userId, sessionId }) {
+  if (!sessionId) throw new Error('sessionId harus disediakan');
 
-// Pseudocode di express:
-router.post('/chat', async (req, res) => {
-  const { sessionId, userMessage } = req.body;
+  const topic = await prisma.topic.findUnique({
+    where: { id: topicId },
+    include: { problems: true }
+  });
+  if (!topic) throw new Error('Topik tidak ditemukan');
 
-  // Simpan userMessage ke Redis dan PostgreSQL
-  await redis.rpush(`chat:${sessionId}`, `USER: ${userMessage}`);
-  await db.chat.create({ sessionId, sender: 'user', text: userMessage });
+  const firstQuestion = topic.problems[0]?.firstQuestion ?? 'Pertanyaan awal belum tersedia';
 
-  // Ambil context
-  const session = await db.session.findUnique({ where: { id: sessionId } });
-  const chatHistory = await redis.lrange(`chat:${sessionId}`, -10, -1);
+  const recall = await prisma.activeRecall.findFirst();
+  const recallContent = recall
+    ? `Active Recall:\n- ${recall.test1}\n- ${recall.test2}\n- ${recall.test3}\n- ${recall.test4}`
+    : 'Belum ada data active recall.';
 
-  // Tentukan stage diskusi
-  const stage = session.stage || 'discussion';
+  const systemMsg = `${recallContent}\n\nPertanyaan Awal: ${firstQuestion}`;
 
-  // Generate prompt
-  const prompt = promptGenerator({
-    behavior: session.behavior,
-    topic: session.topicName,
-    problem: session.problemTitle,
-    history: chatHistory,
-    stage,
-    userMessage
+  const historyRaw = await getChatHistory(sessionId);
+  const isFirstMessage = historyRaw.length === 0;
+
+  if (isFirstMessage) {
+    await appendChatMessage(sessionId, 'system', systemMsg);
+  }
+
+  await appendChatMessage(sessionId, 'user', message);
+
+  const chatHistory = (await getChatHistory(sessionId))
+    .filter(m => m.role !== 'system')
+    .map(m => `${m.role}: ${m.content}`);
+
+  const promptText = buildPrompt(message, {
+    mode: 'DEFAULT',
+    topic: topic.title,
+    problem: topic.problems[0]?.text ?? '',
+    chatHistory
   });
 
-  // Kirim ke AI
-  const aiText = await aiService.callAI(prompt);
+  const messages = [
+    { role: 'system', content: systemMsg },
+    { role: 'user', content: promptText }
+  ];
 
-  // Analisis tag
-  const analysis = analyzeAIResponse(aiText);
+  const completion = await openai.chat.completions.create({
+    model: 'gpt-4',
+    messages,
+    temperature: 0.7
+  });
 
-  // Simpan AI response
-  await redis.rpush(`chat:${sessionId}`, `AI: ${aiText}`);
+  const reply = completion.choices[0].message.content;
 
-  // Update session jika perlu
-  if (analysis.isFinalSolution) {
-    await db.session.update({ where:{id:sessionId}, data:{stage:'realization'} });
-  }
+  await appendChatMessage(sessionId, 'assistant', reply);
 
-  // Response ke frontend
-  res.json({ text: aiText.replace(/<.*?>/g,''), ...analysis });
-});
+  return reply.replace(/<.*?>/g, '');
+}
+
+module.exports = { handleUserMessage };
