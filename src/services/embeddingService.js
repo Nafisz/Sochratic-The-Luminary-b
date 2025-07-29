@@ -3,7 +3,7 @@ require('dotenv').config();
 
 async function storeEmbedding(vector, metadata) {
   try {
-    const res = await axios.post(`${process.env.QDRANT_URL || 'http://localhost:6333'}/collections/novax/points`, {
+    const res = await axios.post(`${process.env.QDRANT_URL}/collections/novax/points`, {
       points: [
         {
           id: metadata.id || Date.now(),

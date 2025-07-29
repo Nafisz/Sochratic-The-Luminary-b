@@ -12,8 +12,7 @@ services:
       - redis
       - postgres
       - qdrant
-    volumes:
-      - .:/app
+      
     working_dir: /app
 
   redis:

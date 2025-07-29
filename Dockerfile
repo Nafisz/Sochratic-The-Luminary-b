@@ -1,17 +1,26 @@
 FROM node:18
 
-# Set working directory
 WORKDIR /app
 
-# Copy package files and install
+# Copy package files first
 COPY package*.json ./
-RUN npm install
 
-# Copy seluruh project (termasuk folder src/)
+# Install dependencies with verbose output
+RUN npm install --verbose
+
+# Verify express is installed
+RUN node -e "console.log(require.resolve('express'))"
+
+# Copy source code
 COPY . .
 
-# Pindah ke src untuk menjalankan index.js
-WORKDIR /app/src
+# Create .env file if it doesn't exist (with default values)
+RUN echo "POSTGRES_USER=postgres\nPOSTGRES_PASSWORD=password\nPOSTGRES_DB=scientiax\nDATABASE_URL=postgresql://postgres:password@postgres:5432/scientiax\nREDIS_URL=redis://redis:6379\nPORT=3000\nNODE_ENV=development" > .env
 
-# Jalankan app dari src/index.js
+# Generate Prisma client
+RUN npx prisma generate
+
+EXPOSE 3000
+
+# Start the application
 CMD ["node", "src/index.js"]

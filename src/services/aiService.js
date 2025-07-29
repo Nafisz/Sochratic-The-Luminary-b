@@ -42,7 +42,7 @@ require('dotenv').config();
 
 async function aiService(conversation) {
   const response = await axios.post(
-    'https://api.openai.com/v1/chat/completions',
+    'https://api.cometapi.com/v1/chat/completions',
     {
       model: 'gpt-4o',
       messages: [
@@ -69,7 +69,7 @@ async function getAIResponse(userMessage, context = {}) {
   const prompt = buildPrompt(userMessage, context);
 
   const response = await axios.post(
-    'https://api.openai.com/v1/chat/completions',
+    'https://api.cometapi.com/v1/chat/completions',
     {
       model: 'gpt-4',
       messages: [

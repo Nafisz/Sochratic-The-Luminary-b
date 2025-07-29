@@ -1,5 +1,9 @@
 // src/index.js  (final, 1-to-1 dengan struktur aktual)
-require('dotenv').config();
+try {
+  require('dotenv').config();
+} catch (error) {
+  console.log('dotenv not available, using default environment variables');
+}
 const express = require('express');
 const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
@@ -15,7 +19,7 @@ const topicRoutes   = require('./routes/topicRoutes');
 // ── Instance setup ------------------------------------------------
 const app    = express();
 const prisma = new PrismaClient();
-const redis  = createClient({ url: process.env.REDIS_URL });
+const redis  = createClient({ url: process.env.REDIS_URL || 'redis://redis:6379' });
 
 // ── Middleware ----------------------------------------------------
 app.use(cors());
@@ -28,11 +32,11 @@ redis.connect().catch(console.error);
 app.get('/', (_, res) => res.json({ status: 'NovaX Backend Running 🚀' }));
 
 // ── Mount routes --------------------------------------------------
-app.use('/api/auth',    authRoutes);
-app.use('/api/chat',    chatRoutes);
-app.use('/api/exp',     expRoutes);
-app.use('/api/session', sessionRoutes);
-app.use('/api/topic',   topicRoutes);
+app.use('/api/auth',    authRoutes(prisma));
+app.use('/api/chat',    chatRoutes(prisma));
+app.use('/api/exp',     expRoutes(prisma));
+app.use('/api/session', sessionRoutes(prisma));
+app.use('/api/topic',   topicRoutes(prisma));
 
 // ── Boot ----------------------------------------------------------
 const PORT = process.env.PORT || 3000;

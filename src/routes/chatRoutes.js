@@ -1,16 +1,17 @@
-// services/chatService.js
+const express = require('express');
 const OpenAI = require('openai');
-const { PrismaClient } = require('@prisma/client');
-const prisma = new PrismaClient();
-const { getChatHistory, appendChatMessage } = require('./chat-state');
-const { buildPrompt } = require('./promptManager');
+const { getChatHistory, appendChatMessage } = require('../services/chat-state');
+const { buildPrompt } = require('../services/promptManager');
 require('dotenv').config();
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+module.exports = (prisma) => {
+  const router = express.Router();
 
-async function handleUserMessage({ topicId, message, userId, sessionId }) {
+  const openai = process.env.OPENAI_API_KEY ? new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY,
+  }) : null;
+
+  async function handleUserMessage({ topicId, message, userId, sessionId }) {
   if (!sessionId) throw new Error('sessionId harus disediakan');
 
   const topic = await prisma.topic.findUnique({
@@ -53,6 +54,10 @@ async function handleUserMessage({ topicId, message, userId, sessionId }) {
     { role: 'user', content: promptText }
   ];
 
+  if (!openai) {
+    throw new Error('OpenAI API key tidak tersedia. Silakan set OPENAI_API_KEY environment variable.');
+  }
+
   const completion = await openai.chat.completions.create({
     model: 'gpt-4',
     messages,
@@ -66,4 +71,22 @@ async function handleUserMessage({ topicId, message, userId, sessionId }) {
   return reply.replace(/<.*?>/g, '');
 }
 
-module.exports = { handleUserMessage };
+  // POST /api/chat/message
+  router.post('/message', async (req, res) => {
+    try {
+      const { topicId, message, userId, sessionId } = req.body;
+      
+      if (!topicId || !message || !sessionId) {
+        return res.status(400).json({ error: 'topicId, message, dan sessionId diperlukan' });
+      }
+
+      const reply = await handleUserMessage({ topicId, message, userId, sessionId });
+      res.json({ reply });
+    } catch (error) {
+      console.error('Chat error:', error);
+      res.status(500).json({ error: error.message || 'Terjadi kesalahan server' });
+    }
+  });
+
+  return router;
+};

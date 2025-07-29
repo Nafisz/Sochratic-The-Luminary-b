@@ -43,7 +43,7 @@ Teks diskusi:
   `.trim();
 
   const res = await axios.post(
-    'https://api.openai.com/v1/chat/completions',
+    'https://api.cometapi.com/v1/chat/completions',
     {
       model: 'gpt-3.5-turbo-1106',
       messages: [{ role: 'user', content: prompt }],
