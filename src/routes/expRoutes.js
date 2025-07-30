@@ -9,26 +9,26 @@ module.exports = (prisma) => {
 
   /**
    * POST /api/exp/assess/:sessionId
-   * AI menilai seluruh percakapan lalu simpan 8 elemen EXP
+   * AI assesses entire conversation then saves 8 EXP elements
    */
   router.post('/assess/:sessionId', async (req, res) => {
     const { sessionId } = req.params;
     try {
-      // 1️⃣  Ambil semua pesan (termasuk system)
+      // 1️⃣  Get all messages (including system)
       const historyRaw = await getChatHistory(sessionId);
       const fullText = historyRaw
         .map(m => `${m.role}: ${m.content}`)
         .join('\n');
 
-      // 2️⃣  Nilai 8 elemen via AI
+      // 2️⃣  Assess 8 elements via AI
       const points = await assessSession(fullText);
 
-      // 3️⃣  Simpan ke DB
+      // 3️⃣  Save to DB
       await prisma.expPoint.createMany({
         data: points.map(p => ({ ...p, sessionId }))
       });
 
-      // 4️⃣  Hitung total EXP user (semua session)
+      // 4️⃣  Calculate total user EXP (all sessions)
       const sessions = await prisma.session.findMany({
         where: { userId: (await prisma.session.findUnique({ where: { id: parseInt(sessionId) } }))?.userId },
         include: { expPoints: true }
@@ -41,13 +41,13 @@ module.exports = (prisma) => {
       res.json({ success: true, points, totalExp, level });
     } catch (err) {
       console.error(err);
-      res.status(500).json({ error: 'Gagal menilai session.' });
+      res.status(500).json({ error: 'Failed to assess session.' });
     }
   });
 
   /**
    * POST /api/exp
-   * Bulk-insert manual (untuk testing / admin)
+   * Manual bulk-insert (for testing / admin)
    */
   router.post('/', async (req, res) => {
     const { sessionId, points } = req.body; // [{ element:'Accuracy', value: 80 }, ...]
@@ -57,14 +57,14 @@ module.exports = (prisma) => {
       });
       res.json({ success: true, count: created.count });
     } catch (err) {
-      res.status(500).json({ error: 'Gagal menyimpan EXP.' });
+      res.status(500).json({ error: 'Failed to save EXP.' });
     }
   });
 
-  /**
-   * GET /api/exp/user/:userId
-   * Dashboard total per elemen + level
-   */
+     /**
+    * GET /api/exp/user/:userId
+    * Dashboard total per element + level
+    */
   router.get('/user/:userId', async (req, res) => {
     const { userId } = req.params;
     try {
@@ -73,7 +73,7 @@ module.exports = (prisma) => {
         include: { expPoints: true }
       });
 
-      // total per elemen
+      // total per element
       const dashboard = {};
       let totalExp = 0;
       sessions.forEach(session => {
@@ -95,7 +95,7 @@ module.exports = (prisma) => {
         nextLevelExp
       });
     } catch (err) {
-      res.status(500).json({ error: 'Gagal mengambil dashboard.' });
+      res.status(500).json({ error: 'Failed to get dashboard.' });
     }
   });
 

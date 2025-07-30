@@ -11,22 +11,22 @@ const openai = new OpenAI({
 });
 
 async function handleUserMessage({ topicId, message, userId, sessionId }) {
-  if (!sessionId) throw new Error('sessionId harus disediakan');
+  if (!sessionId) throw new Error('sessionId must be provided');
 
   const topic = await prisma.topic.findUnique({
     where: { id: topicId },
     include: { problems: true }
   });
-  if (!topic) throw new Error('Topik tidak ditemukan');
+  if (!topic) throw new Error('Topic not found');
 
-  const firstQuestion = topic.problems[0]?.firstQuestion ?? 'Pertanyaan awal belum tersedia';
+  const firstQuestion = topic.problems[0]?.firstQuestion ?? 'Initial question not available';
 
   const recall = await prisma.activeRecall.findFirst();
   const recallContent = recall
     ? `Active Recall:\n- ${recall.test1}\n- ${recall.test2}\n- ${recall.test3}\n- ${recall.test4}`
-    : 'Belum ada data active recall.';
+    : 'No active recall data available.';
 
-  const systemMsg = `${recallContent}\n\nPertanyaan Awal: ${firstQuestion}`;
+  const systemMsg = `${recallContent}\n\nInitial Question: ${firstQuestion}`;
 
   const historyRaw = await getChatHistory(sessionId);
   const isFirstMessage = historyRaw.length === 0;

@@ -1,13 +1,13 @@
 // promptManager.js
 
 const behaviorPrompt =
-  `Perankan dirimu sebagai mentor AI pada platform belajar berbasis diskusi dan proyek. ` +
-  `Fokus pada pemikiran reflektif dan pemahaman mendalam. ` +
-  `Jangan langsung menjelaskan konsep atau memberi jawaban. ` +
-  `Gunakan pendekatan Socratic, bantu user berpikir lewat pertanyaan dilematis dan klarifikasi.`;
+  `Act as an AI mentor on a discussion and project-based learning platform. ` +
+  `Focus on reflective thinking and deep understanding. ` +
+  `Don't directly explain concepts or give answers. ` +
+  `Use Socratic approach, help users think through dilemma questions and clarification.`;
 
 /**
- * Menghasilkan instruksi otomatis berdasarkan mode
+ * Generate automatic instructions based on mode
  * @param {string} mode
  * @param {string} topic
  * @param {string[]} chatHistory
@@ -16,14 +16,14 @@ const behaviorPrompt =
  */
 function getAutoPrompt(mode, topic, chatHistory = [], problem = '') {
   switch (mode) {
-    case 'JELASKAN_KONSEP':
-      return `User memerlukan penjelasan konsep. Berikan penjelasan dari nama notasi (bentuk) contoh penggunaan, relevan dengan topik "${topic}", dan tandai dengan <MATERI_JENIS=...>. Penjelasan harus mendalam tapi menarik.`;
+    case 'EXPLAIN_CONCEPT':
+      return `User needs concept explanation. Provide explanation from notation name (form) usage example, relevant to topic "${topic}", and mark with <MATERIAL_TYPE=...>. Explanation should be deep but engaging.`;
 
-    case 'MINTA_SOLUSI':
-      return `Minta user untuk menyusun solusi akhir berdasarkan diskusi dan pemahaman yang sudah terjadi. Jangan bantu dulu, biarkan user mencoba mandiri.`;
+    case 'REQUEST_SOLUTION':
+      return `Ask user to compose final solution based on discussion and understanding that has occurred. Don't help first, let user try independently.`;
 
-    case 'MASUK_REALISASI':
-      return `User telah memberikan solusi akhir yang relevan. Lihat solusi user:\n${chatHistory.join('\n')}\nyang berdampak untuk masalah "${problem}". Buat versi kode atau realisasi dari solusi user dalam bentuk kode yang bisa dijalankan namun sisakan bagian kosong yang harus dilengkapi user di bagian yang terkait dengan topik "${topic}". Tambahkan tag <REALISASI_MULAI> dan <EXP_TAMBAH=...> jika berhasil.`;
+    case 'ENTER_IMPLEMENTATION':
+      return `User has provided relevant final solution. See user's solution:\n${chatHistory.join('\n')}\nwhich impacts the problem "${problem}". Create code version or implementation from user's solution in executable code form but leave empty parts that user must complete in sections related to topic "${topic}". Add tag <IMPLEMENTATION_START> and <EXP_ADD=...> if successful.`;
 
     default:
       return '';
@@ -31,7 +31,7 @@ function getAutoPrompt(mode, topic, chatHistory = [], problem = '') {
 }
 
 /**
- * Membangun prompt lengkap untuk dikirim ke OpenAI
+ * Build complete prompt to send to OpenAI
  * @param {string} userMessage
  * @param {object} context
  * @param {string} context.mode
@@ -53,9 +53,9 @@ function buildPrompt(userMessage, context = {}) {
   return `
 ${behaviorPrompt}
 
-${autoPrompt ? '\nInstruksi tambahan:\n' + autoPrompt : ''}
+${autoPrompt ? '\nAdditional instructions:\n' + autoPrompt : ''}
 
-Topik diskusi: ${topic || 'Tidak disebutkan'}
+Discussion topic: ${topic || 'Not specified'}
 
 User: ${userMessage}
 AI:

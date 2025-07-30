@@ -9,7 +9,7 @@ module.exports = (prisma) => {
     const { email, username, password, name, age } = req.body;
 
     if (!email || !username || !password || !name || age === undefined) {
-      return res.status(400).json({ error: 'Semua data diperlukan untuk registrasi' });
+      return res.status(400).json({ error: 'All data is required for registration' });
     }
 
     try {
@@ -20,7 +20,7 @@ module.exports = (prisma) => {
       });
 
       if (existingUser) {
-        return res.status(409).json({ error: 'Email atau username sudah digunakan' });
+        return res.status(409).json({ error: 'Email or username already exists' });
       }
 
       const hashedPassword = await bcrypt.hash(password, 10);
@@ -35,12 +35,12 @@ module.exports = (prisma) => {
         },
       });
 
-      // Jangan kirim password ke client
+      // Don't send password to client
       const { password: _, ...safeUser } = newUser;
-      res.status(201).json({ message: 'Registrasi berhasil', user: safeUser });
+      res.status(201).json({ message: 'Registration successful', user: safeUser });
     } catch (err) {
       console.error(err);
-      res.status(500).json({ error: 'Terjadi kesalahan server saat registrasi' });
+      res.status(500).json({ error: 'Server error during registration' });
     }
   });
 
@@ -49,7 +49,7 @@ module.exports = (prisma) => {
     const { email, username, password } = req.body;
 
     if ((!email && !username) || !password) {
-      return res.status(400).json({ error: 'Email atau username dan password diperlukan untuk login' });
+      return res.status(400).json({ error: 'Email or username and password are required for login' });
     }
 
     try {
@@ -58,19 +58,19 @@ module.exports = (prisma) => {
       });
 
       if (!user) {
-        return res.status(401).json({ error: 'User tidak ditemukan' });
+        return res.status(401).json({ error: 'User not found' });
       }
 
       const isPasswordValid = await bcrypt.compare(password, user.password);
       if (!isPasswordValid) {
-        return res.status(401).json({ error: 'Password salah' });
+        return res.status(401).json({ error: 'Invalid password' });
       }
 
       const { password: _, ...safeUser } = user;
-      res.json({ message: 'Login berhasil', user: safeUser });
+      res.json({ message: 'Login successful', user: safeUser });
     } catch (err) {
       console.error(err);
-      res.status(500).json({ error: 'Terjadi kesalahan server saat login' });
+      res.status(500).json({ error: 'Server error during login' });
     }
   });
 

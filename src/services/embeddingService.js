@@ -14,7 +14,7 @@ async function storeEmbedding(vector, metadata) {
     });
     return res.data;
   } catch (err) {
-    console.error('Gagal simpan embedding:', err.message);
+    console.error('Failed to save embedding:', err.message);
     throw err;
   }
 }

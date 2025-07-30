@@ -11,18 +11,18 @@ module.exports = () => {
       res.json(topics);
     } catch (err) {
       console.error(err);
-      res.status(500).json({ error: 'Gagal memuat topik.' });
+      res.status(500).json({ error: 'Failed to load topics.' });
     }
   });
 
   router.get('/:id', async (req, res) => {
     try {
       const topic = await topicService.getTopicById(req.params.id);
-      if (!topic) return res.status(404).json({ error: 'Topik tidak ditemukan.' });
+      if (!topic) return res.status(404).json({ error: 'Topic not found.' });
       res.json(topic);
     } catch (err) {
       console.error(err);
-      res.status(500).json({ error: 'Gagal memuat detail topik.' });
+      res.status(500).json({ error: 'Failed to load topic details.' });
     }
   });
 
