@@ -7,7 +7,8 @@ const { buildPrompt } = require('./promptManager');
 require('dotenv').config();
 
 const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
+  apiKey: process.env.COMET_API_KEY,
+  baseURL: process.env.COMET_API_BASE_URL || 'https://api.openai.com/v1',
 });
 
 async function handleUserMessage({ topicId, message, userId, sessionId }) {

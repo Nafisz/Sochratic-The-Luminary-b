@@ -76,7 +76,7 @@ async function generateEmbedding(text) {
     },
     { 
       headers: { 
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}` 
+        Authorization: `Bearer ${process.env.COMET_API_KEY}` 
       } 
     }
   );

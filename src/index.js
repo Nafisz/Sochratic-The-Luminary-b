@@ -31,6 +31,49 @@ redis.connect().catch(console.error);
 // ── Health check --------------------------------------------------
 app.get('/', (_, res) => res.json({ status: 'NovaX Backend Running 🚀' }));
 
+// ── Test Comet API without database -------------------------------
+const OpenAI = require('openai');
+const openai = new OpenAI({
+  apiKey: process.env.COMET_API_KEY,
+  baseURL: process.env.COMET_API_BASE_URL || 'https://api.openai.com/v1',
+});
+
+app.post('/test-comet', async (req, res) => {
+  try {
+    const { message = "Hello! Can you tell me a joke?" } = req.body;
+    
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4',
+      messages: [
+        { role: 'user', content: message }
+      ],
+      temperature: 0.7
+    });
+
+    console.log('CometAPI Response:', JSON.stringify(completion, null, 2));
+    
+    if (!completion.choices || completion.choices.length === 0) {
+      throw new Error('No choices returned from CometAPI');
+    }
+
+    const reply = completion.choices[0].message.content;
+    
+    res.json({ 
+      success: true,
+      message: message,
+      reply: reply,
+      api: 'Comet API working!'
+    });
+  } catch (error) {
+    console.error('CometAPI Error:', error);
+    res.status(500).json({ 
+      success: false,
+      error: error.message,
+      api: 'Comet API failed'
+    });
+  }
+});
+
 // ── Mount routes --------------------------------------------------
 app.use('/api/auth',    authRoutes(prisma));
 app.use('/api/chat',    chatRoutes(prisma));

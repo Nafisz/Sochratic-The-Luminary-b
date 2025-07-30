@@ -7,8 +7,9 @@ require('dotenv').config();
 module.exports = (prisma) => {
   const router = express.Router();
 
-  const openai = process.env.OPENAI_API_KEY ? new OpenAI({
-    apiKey: process.env.OPENAI_API_KEY,
+  const openai = process.env.COMET_API_KEY ? new OpenAI({
+    apiKey: process.env.COMET_API_KEY,
+    baseURL: process.env.COMET_API_BASE_URL || 'https://api.openai.com/v1',
   }) : null;
 
   async function handleUserMessage({ topicId, message, userId, sessionId, mode = 'DEFAULT' }) {
@@ -56,7 +57,7 @@ module.exports = (prisma) => {
   ];
 
   if (!openai) {
-    throw new Error('OpenAI API key not available. Please set OPENAI_API_KEY environment variable.');
+    throw new Error('Comet API key not available. Please set COMET_API_KEY environment variable.');
   }
 
   const completion = await openai.chat.completions.create({
