@@ -9,6 +9,7 @@ function analyzeAIResponse(aiText) {
     explanationType: null,
     isFinalSolution: false,
     isRealization: false,
+    isActiveRecall: false,
     expReward: 0,
   };
 
@@ -27,6 +28,11 @@ function analyzeAIResponse(aiText) {
   // Check if solution realization has started
   if (aiText.includes('<IMPLEMENTATION_START>')) {
     result.isRealization = true;
+  }
+
+  // Check if active recall mode
+  if (aiText.includes('<ACTIVE_RECALL_MODE>')) {
+    result.isActiveRecall = true;
   }
 
   // EXP from AI

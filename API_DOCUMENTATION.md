@@ -1,88 +1,68 @@
-# API Documentation - Session-Based Analysis System
+# API Documentation
 
 ## Overview
-This system analyzes learning sessions holistically by reading the entire conversation from Redis, analyzing it with AI, converting to EXP points, embedding to Qdrant, and cleaning up the cache.
+This API provides a comprehensive learning system with automatic mode switching, session-based analysis, and intelligent AI responses.
 
-### AI Assessment System
-The AI evaluates student performance across 9 cognitive dimensions with calculated scores (0-100):
+## Core Features
 
-**Scoring Scale:**
-- **0-20**: Poor performance, significant misunderstandings
-- **21-40**: Below average, some understanding but major gaps  
-- **41-60**: Average performance, basic understanding with room for improvement
-- **61-80**: Good performance, solid understanding with some depth
-- **81-100**: Excellent performance, deep understanding and sophisticated thinking
+### ✅ **Automatic Mode System**
+- **DEFAULT**: Normal chat with automatic concept detection
+- **EXPLAIN_CONCEPT**: Automatic concept explanation when needed
+- **REQUEST_SOLUTION**: Frontend-triggered solution request
+- **ENTER_IMPLEMENTATION**: Frontend-triggered code implementation
+- **ACTIVE_RECALL**: Frontend-triggered understanding test
 
-**Assessment Dimensions:**
-- **Clarity**: How clearly did the student express their thoughts?
-- **Accuracy**: How accurate were the student's answers and concepts?
-- **Precision**: How precise and specific were the student's responses?
-- **Relevance**: How relevant were the student's answers to the topic?
-- **Depth**: How deep was the student's understanding and analysis?
-- **Breadth**: How comprehensive was the student's knowledge?
-- **Logic**: How logical and well-reasoned were the student's arguments?
-- **Significance**: How meaningful were the student's contributions?
-- **Fairness**: How balanced and objective was the student's perspective?
+### ✅ **Session-Based Analysis**
+- All conversations stored in Redis as single sessions
+- Complete conversation analysis at session end
+- EXP calculation based on full context
+- Embedding storage in Qdrant for long-term memory
 
-## Session Management
+### ✅ **Intelligent AI Responses**
+- Automatic detection of user needs
+- Context-aware responses
+- Tag-based EXP rewards
+- Seamless mode transitions
 
-### 1. Create New Session
-**POST** `/api/session`
+## API Endpoints
 
-Creates a new session and stores initial conversation log in Redis.
+### **1. Chat System**
 
-**Request Body:**
-```json
+#### **POST /api/chat/message**
+Send a message and get AI response with automatic mode detection.
+
+**Request:**
+```javascript
 {
+  "topicId": 5,
+  "message": "Saya bingung dengan variable",
   "userId": 1,
-  "topic": "JavaScript Fundamentals",
-  "conversationLog": []
-}
-```
-
-**Response:**
-```json
-{
-  "session": {
-    "id": 123,
-    "userId": 1,
-    "topic": "JavaScript Fundamentals",
-    "createdAt": "2025-07-30T00:00:00.000Z"
-  }
-}
-```
-
-### 2. Get Session Summary
-**GET** `/api/session/:id/summary`
-
-Gets a summary of the session from Redis without processing.
-
-**Response:**
-```json
-{
   "sessionId": 123,
-  "messageCount": 15,
-  "hasData": true,
-  "preview": [
-    "user: What is a variable?",
-    "assistant: A variable is a container for storing data...",
-    "user: How do I declare one?"
-  ]
+  "mode": "DEFAULT" // Optional: DEFAULT, EXPLAIN_CONCEPT, REQUEST_SOLUTION, ENTER_IMPLEMENTATION, ACTIVE_RECALL
 }
 ```
 
-### 3. Analyze Session (Complete Workflow)
-**POST** `/api/session/:id/analyze`
+**Response:**
+```javascript
+{
+  "reply": "Variable adalah container untuk menyimpan data. Dalam JavaScript, Anda mendeklarasikan variable menggunakan `let`, `const`, atau `var`. <MATERIAL_TYPE=DEFINITION>"
+}
+```
 
-**Complete session analysis workflow:**
-1. ✅ Read entire session from Redis
-2. ✅ Analyze with AI for EXP conversion
-3. ✅ Embed conversation to Qdrant
-4. ✅ Clean up Redis cache
-5. ✅ Save EXP points to database
+**Mode Detection Logic:**
+- **DEFAULT**: AI automatically detects if user needs concept explanation
+- **EXPLAIN_CONCEPT**: AI provides detailed concept explanation with `<MATERIAL_TYPE=...>`
+- **REQUEST_SOLUTION**: AI asks user to provide final solution
+- **ENTER_IMPLEMENTATION**: AI creates code implementation with `<IMPLEMENTATION_START>`
+- **ACTIVE_RECALL**: AI provides test questions with `<ACTIVE_RECALL_MODE>`
 
-**Request Body:**
-```json
+### **2. Session Management**
+
+#### **POST /api/session**
+Create a new learning session.
+
+**Request:**
+```javascript
 {
   "userId": 1,
   "topicId": 5
@@ -90,182 +70,216 @@ Gets a summary of the session from Redis without processing.
 ```
 
 **Response:**
-```json
+```javascript
 {
-  "success": true,
-  "sessionId": 123,
-     "expPoints": [
-     { "element": "Clarity", "value": 85 },
-     { "element": "Accuracy", "value": 78 },
-     { "element": "Precision", "value": 72 },
-     { "element": "Relevance", "value": 90 },
-     { "element": "Depth", "value": 68 },
-     { "element": "Breadth", "value": 65 },
-     { "element": "Logic", "value": 82 },
-     { "element": "Significance", "value": 75 },
-     { "element": "Fairness", "value": 80 }
-   ],
-  "messageCount": 15,
-  "totalExp": 650,
-  "totalExp": 1250,
-  "level": 3,
-  "message": "Session analyzed and processed successfully"
+  "sessionId": "session_123",
+  "userId": 1,
+  "topicId": 5,
+  "createdAt": "2024-01-01T00:00:00.000Z"
 }
 ```
 
-### 4. Get Session with EXP Points
-**GET** `/api/session/:id/points`
-
-Gets session details with EXP points from database.
+#### **GET /api/session/:id/summary**
+Get session summary without processing.
 
 **Response:**
-```json
+```javascript
 {
-  "id": 123,
-  "userId": 1,
-  "topic": "JavaScript Fundamentals",
-  "createdAt": "2025-07-30T00:00:00.000Z",
-  "expPoints": [
-    {
-      "id": 1,
-      "element": "Clarity",
-      "value": 75,
-      "sessionId": 123
-    }
+  "sessionId": "session_123",
+  "messageCount": 8,
+  "hasData": true,
+  "preview": [
+    "user: Apa itu variable?",
+    "assistant: Coba pikirkan...",
+    "user: Saya masih bingung"
   ]
 }
 ```
 
-## Chat System
+#### **POST /api/session/:id/analyze**
+Trigger complete session analysis (AI assessment, EXP calculation, embedding storage).
 
-### Send Message
-**POST** `/api/chat/message`
-
-Sends a message and gets AI response. Tags are preserved for session analysis.
-
-**Request Body:**
-```json
+**Request:**
+```javascript
 {
-  "topicId": 5,
-  "message": "What is a variable?",
   "userId": 1,
-  "sessionId": 123
+  "topicId": 5
 }
 ```
 
 **Response:**
-```json
+```javascript
 {
-  "reply": "A variable is a container for storing data values. In JavaScript, you declare variables using keywords like `let`, `const`, or `var`. <CONCEPT_TYPE=DEFINITION>"
+  "success": true,
+  "sessionId": "session_123",
+  "expPoints": [
+    { "element": "clarity", "value": 85 },
+    { "element": "accuracy", "value": 90 },
+    { "element": "depth", "value": 75 }
+  ],
+  "messageCount": 8,
+  "totalExp": 250,
+  "elements": ["clarity", "accuracy", "depth"]
 }
 ```
 
-## User Experience Flow
+### **3. User Experience Flow**
 
-### 1. Start Learning Session
+#### **Stage 1: Default Chat**
 ```javascript
-// 1. Create session
-const session = await fetch('/api/session', {
-  method: 'POST',
-  body: JSON.stringify({
-    userId: 1,
-    topic: "JavaScript Fundamentals"
-  })
-});
+// User sends message
+POST /api/chat/message
+{
+  "message": "Apa itu variable?",
+  "mode": "DEFAULT"
+}
 
-// 2. Start chatting
-const response = await fetch('/api/chat/message', {
-  method: 'POST',
-  body: JSON.stringify({
-    topicId: 5,
-    message: "What is a variable?",
-    userId: 1,
-    sessionId: session.id
-  })
-});
+// AI responds with Socratic approach
+// If AI detects user needs explanation → automatically switches to EXPLAIN_CONCEPT
 ```
 
-### 2. End and Analyze Session
+#### **Stage 2: Concept Explanation (Automatic)**
 ```javascript
-// 3. When session is complete, analyze it
-const analysis = await fetch(`/api/session/${session.id}/analyze`, {
-  method: 'POST',
-  body: JSON.stringify({
-    userId: 1,
-    topicId: 5
-  })
-});
-
-// 4. Show results to user
-console.log(`You earned ${analysis.totalExp} EXP!`);
-console.log(`Your level: ${analysis.level}`);
+// AI automatically provides explanation
+{
+  "reply": "Variable adalah container untuk menyimpan data... <MATERIAL_TYPE=DEFINITION>"
+}
 ```
 
-## Benefits of This Approach
+#### **Stage 3: Solution Request (Frontend Trigger)**
+```javascript
+// User clicks "Continue" in frontend
+POST /api/chat/message
+{
+  "message": "Lanjutkan",
+  "mode": "REQUEST_SOLUTION"
+}
+
+// AI asks for final solution
+{
+  "reply": "Bagus! Sekarang coba buat program yang menyimpan nama user..."
+}
+```
+
+#### **Stage 4: Implementation (Frontend Trigger)**
+```javascript
+// User clicks "Continue" again
+POST /api/chat/message
+{
+  "message": "Lanjutkan",
+  "mode": "ENTER_IMPLEMENTATION"
+}
+
+// AI provides code implementation
+{
+  "reply": "Excellent! Mari kita buat versi lengkapnya... <IMPLEMENTATION_START> <EXP_ADD=50>"
+}
+```
+
+#### **Stage 5: Active Recall (Frontend Trigger)**
+```javascript
+// User clicks final "Continue"
+POST /api/chat/message
+{
+  "message": "Lanjutkan",
+  "mode": "ACTIVE_RECALL"
+}
+
+// AI provides test questions
+{
+  "reply": "Mari kita test pemahaman Anda... <ACTIVE_RECALL_MODE>"
+}
+```
+
+#### **Stage 6: Session Analysis**
+```javascript
+// Complete session analysis
+POST /api/session/session_123/analyze
+{
+  "userId": 1,
+  "topicId": 5
+}
+
+// Returns comprehensive EXP assessment
+```
+
+## Benefits
 
 ### ✅ **Context Preservation**
-- AI analyzes entire conversation, not just individual messages
-- Maintains learning progression and context
-- More accurate assessment of understanding
+- All conversations maintained in single Redis session
+- AI has full context for accurate assessment
+- No information loss during mode transitions
 
 ### ✅ **Efficient Processing**
-- Single AI call per session instead of per message
-- Reduced API costs and processing time
-- Better resource utilization
+- Batch processing at session end
+- Reduced API calls for EXP calculation
+- Optimized resource usage
 
 ### ✅ **Data Integrity**
-- Complete conversation preserved in Qdrant
-- EXP points based on holistic analysis
-- Clean Redis cache management
+- Atomic session operations
+- Consistent EXP calculation
+- Reliable embedding storage
 
 ### ✅ **Scalable Architecture**
-- Session-based processing scales better
-- Easier to implement batch processing
-- Better error handling and recovery
+- Session-based processing
+- Redis for temporary storage
+- Qdrant for long-term memory
 
 ## Error Handling
 
-### Common Error Responses
-
-**Session Not Found:**
-```json
+### **Common Error Responses:**
+```javascript
+// Missing required fields
 {
-  "error": "Session not found or empty."
+  "error": "topicId, message, and sessionId are required"
 }
-```
 
-**Missing Parameters:**
-```json
+// Session not found
 {
-  "error": "userId and topicId are required for session analysis"
+  "error": "No session data found in Redis"
 }
-```
 
-**Analysis Failed:**
-```json
+// Invalid mode
 {
-  "error": "Failed to analyze session: No session data found in Redis"
+  "error": "Invalid mode. Valid modes: DEFAULT, EXPLAIN_CONCEPT, REQUEST_SOLUTION, ENTER_IMPLEMENTATION, ACTIVE_RECALL"
 }
 ```
 
 ## Migration from Old System
 
-The old per-message analysis system (`/api/ai`) has been deprecated. Use the new session-based analysis for better results and performance.
-
-**Old (Deprecated):**
+### **Old Per-Message Analysis (Deprecated)**
 ```javascript
-// ❌ Don't use this anymore
-fetch('/api/ai', {
-  method: 'POST',
-  body: JSON.stringify({ conversation, sessionId, userId })
-});
+// OLD: POST /api/ai/analyze (returns 410 Gone)
+// NEW: Use session-based analysis instead
 ```
 
-**New (Recommended):**
+### **New Session-Based Analysis**
 ```javascript
-// ✅ Use this instead
-fetch(`/api/session/${sessionId}/analyze`, {
-  method: 'POST',
-  body: JSON.stringify({ userId, topicId })
-});
-``` 
+// 1. Create session
+POST /api/session
+
+// 2. Send messages (all modes supported)
+POST /api/chat/message
+
+// 3. Analyze complete session
+POST /api/session/:id/analyze
+```
+
+## Technical Details
+
+### **Mode Detection Tags:**
+- `<MATERIAL_TYPE=...>` - Concept explanation
+- `<FINAL_SOLUTION=YES>` - Solution request
+- `<IMPLEMENTATION_START>` - Code implementation
+- `<ACTIVE_RECALL_MODE>` - Test questions
+- `<EXP_ADD=...>` - EXP rewards
+
+### **Session Storage:**
+- **Redis**: Temporary conversation storage
+- **PostgreSQL**: User data, sessions, EXP points
+- **Qdrant**: Long-term conversation embeddings
+
+### **AI Models:**
+- **Chat**: GPT-4 for responses
+- **Analysis**: GPT-4o for session assessment
+- **Embeddings**: text-embedding-3-small for vector storage 

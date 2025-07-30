@@ -11,7 +11,7 @@ module.exports = (prisma) => {
     apiKey: process.env.OPENAI_API_KEY,
   }) : null;
 
-  async function handleUserMessage({ topicId, message, userId, sessionId }) {
+  async function handleUserMessage({ topicId, message, userId, sessionId, mode = 'DEFAULT' }) {
   if (!sessionId) throw new Error('sessionId must be provided');
 
   const topic = await prisma.topic.findUnique({
@@ -43,10 +43,11 @@ module.exports = (prisma) => {
     .map(m => `${m.role}: ${m.content}`);
 
   const promptText = buildPrompt(message, {
-    mode: 'DEFAULT',
+    mode: mode,
     topic: topic.title,
     problem: topic.problems[0]?.text ?? '',
-    chatHistory
+    chatHistory,
+    activeRecall: recall
   });
 
   const messages = [
@@ -75,13 +76,13 @@ module.exports = (prisma) => {
   // POST /api/chat/message
   router.post('/message', async (req, res) => {
     try {
-      const { topicId, message, userId, sessionId } = req.body;
+      const { topicId, message, userId, sessionId, mode = 'DEFAULT' } = req.body;
       
       if (!topicId || !message || !sessionId) {
         return res.status(400).json({ error: 'topicId, message, and sessionId are required' });
       }
 
-      const reply = await handleUserMessage({ topicId, message, userId, sessionId });
+      const reply = await handleUserMessage({ topicId, message, userId, sessionId, mode });
       res.json({ reply });
     } catch (error) {
       console.error('Chat error:', error);
