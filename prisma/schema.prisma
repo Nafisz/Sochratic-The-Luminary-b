@@ -20,13 +20,15 @@ model User {
 }
 
 model Session {
-  id         Int        @id @default(autoincrement())
-  createdAt  DateTime   @default(now())
-  user       User       @relation(fields: [userId], references: [id])
-  userId     Int
-  topic      Topic      @relation(fields: [topicId], references: [id])
-  topicId    String
-  expPoints  ExpPoint[]
+  id           Int        @id @default(autoincrement())
+  createdAt    DateTime   @default(now())
+  completedAt  DateTime?
+  status       SessionStatus @default(IN_PROGRESS)
+  user         User       @relation(fields: [userId], references: [id])
+  userId       Int
+  topic        Topic      @relation(fields: [topicId], references: [id])
+  topicId      String
+  expPoints    ExpPoint[]
 }
 
 model ExpPoint {
@@ -116,5 +118,11 @@ model LevelHistory {
   newLevel      Int
   changedAt     DateTime   @default(now())
   note          String?
+}
+
+enum SessionStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
 }
 
