@@ -14,6 +14,7 @@ model User {
   name              String
   age               Int
   email             String               @unique
+  createdAt         DateTime             @default(now())
   sessions          Session[]
   userIntelProgress UserIntelProgress[]
 }
@@ -32,22 +33,21 @@ model ExpPoint {
   id          Int         @id @default(autoincrement())
   session     Session     @relation(fields: [sessionId], references: [id])
   sessionId   Int
-  type        PaulsIntel     // enum (clarity, creativity, context, dst.)
+  type        PaulsIntel     // enum
   value       Int
-  comment     String?     // untuk evaluasi tambahan (misal insight AI atau user)
 }
 
 model Course {
   id          String   @id @default(cuid())
   title       String
-  emoji       String?
+  icon        String?
   description String
   content     Topic[]
   difficulty  String
   duration    String
   path        String?
   stage       String
-  themeType   String    // "Lesson" atau "Theme"
+  themeType   String    // "turth", "thought" or "ultra
   createdAt   DateTime  @default(now())
 }
 
@@ -90,7 +90,7 @@ enum PaulsIntel {
 
 model PaulsIntelligenceLevel {
   id            Int             @id @default(autoincrement())
-  type          PaulsIntel      // enum dari 9 jenis
+  type          PaulsIntel      // enum from 9 variance
   level         Int
   requiredExp   Int
   rewardDesc    String?
@@ -105,7 +105,7 @@ model UserIntelProgress {
   exp       Int         @default(0)
   level     Int         @default(1)
 
-  @@unique([userId, type]) // biar tiap user hanya punya satu progres per jenis intel
+  @@unique([userId, type]) // so that each user only has one progress per Intel type
 }
 
 model LevelHistory {
