@@ -1,6 +1,7 @@
 // routes/sessionRoutes.js
 const express = require('express');
 const { analyzeAndProcessSession, getSessionSummary } = require('../services/sessionAnalysisService');
+const { abandonSession, isSessionInProgress, cleanupUserSessions } = require('../services/sessionManagementService');
 
 module.exports = (prisma, redisClient) => {
   const router = express.Router();
@@ -8,25 +9,70 @@ module.exports = (prisma, redisClient) => {
   /**
    * POST /api/session
    * Create new session and store in Redis
+   * Automatically cleans up any existing sessions for the user
    */
   router.post('/', async (req, res) => {
-    const { userId, topic, conversationLog = [] } = req.body;
+    const { userId, topicId, conversationLog = [] } = req.body;
     try {
-      // 1️⃣ Save to DB
+      // 1️⃣ Clean up any existing sessions for this user
+      await cleanupUserSessions(userId, prisma);
+
+      // 2️⃣ Save to DB with IN_PROGRESS status
       const session = await prisma.session.create({
-        data: { userId: Number(userId), topic }
+        data: { 
+          userId: Number(userId), 
+          topicId: topicId,
+          status: 'IN_PROGRESS'
+        }
       });
 
-      // 2️⃣ Save to Redis with session.id key
+      // 3️⃣ Save to Redis with session.id key
       await redisClient.set(
         `session:${session.id}`,
         JSON.stringify(conversationLog)
       );
 
-      res.json({ session });
+      res.json({ 
+        session,
+        message: 'New session started. Any previous sessions have been cleaned up.'
+      });
     } catch (err) {
       console.error(err);
       res.status(500).json({ error: 'Failed to save session.' });
+    }
+  });
+
+  /**
+   * POST /api/session/:id/abandon
+   * Abandon session - delete from Redis AND PostgreSQL
+   */
+  router.post('/:id/abandon', async (req, res) => {
+    const { id } = req.params;
+    try {
+      const result = await abandonSession(id, prisma);
+      res.json(result);
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Failed to abandon session.' });
+    }
+  });
+
+  /**
+   * GET /api/session/:id/status
+   * Check if session is in progress
+   */
+  router.get('/:id/status', async (req, res) => {
+    const { id } = req.params;
+    try {
+      const inProgress = await isSessionInProgress(id);
+      res.json({ 
+        sessionId: id, 
+        inProgress,
+        message: inProgress ? 'Session is in progress' : 'Session not found or completed'
+      });
+    } catch (err) {
+      console.error(err);
+      res.status(500).json({ error: 'Failed to check session status.' });
     }
   });
 

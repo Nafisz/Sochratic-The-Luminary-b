@@ -10,11 +10,13 @@ datasource db {
 }
 
 model User {
-  id                Int                  @id @default(autoincrement())
+  id                Int                 @id @default(autoincrement())
   name              String
+  username          String              @unique
+  password          String
   age               Int
-  email             String               @unique
-  createdAt         DateTime             @default(now())
+  email             String              @unique
+  createdAt         DateTime            @default(now())
   sessions          Session[]
   userIntelProgress UserIntelProgress[]
 }

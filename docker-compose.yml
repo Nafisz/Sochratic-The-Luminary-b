@@ -8,6 +8,8 @@ services:
       - "5555:5555"
     env_file:
       - .env
+    environment:
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost:3000}
     depends_on:
       - redis
       - postgres

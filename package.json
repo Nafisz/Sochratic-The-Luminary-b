@@ -5,7 +5,13 @@
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node server.js"
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "test:cors": "node test-cors.js",
+    "test:api": "curl http://localhost:3000/",
+    "db:migrate": "npx prisma migrate dev",
+    "db:generate": "npx prisma generate",
+    "db:studio": "npx prisma studio"
   },
   "keywords": [],
   "author": "",

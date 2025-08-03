@@ -22,8 +22,35 @@ const prisma = new PrismaClient();
 const redis  = createClient({ url: process.env.REDIS_URL || 'redis://redis:6379' });
 
 // ── Middleware ----------------------------------------------------
-app.use(cors());
+// Konfigurasi CORS untuk mengizinkan frontend dari folder berbeda
+const corsOptions = {
+  origin: [
+    'http://localhost:3000',     // React default
+    'http://localhost:3001',     // React alternative
+    'http://localhost:5173',     // Vite default
+    'http://localhost:8080',     // Vue CLI default
+    'http://localhost:4200',     // Angular default
+    'http://127.0.0.1:3000',
+    'http://127.0.0.1:3001',
+    'http://127.0.0.1:5173',
+    'http://127.0.0.1:8080',
+    'http://127.0.0.1:4200',
+    // Tambahkan domain frontend Anda di sini
+    process.env.FRONTEND_URL // Jika menggunakan environment variable
+  ].filter(Boolean), // Filter out undefined values
+  credentials: true, // Mengizinkan cookies dan headers authorization
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With']
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
+
+// Middleware untuk logging request (berguna untuk debugging)
+app.use((req, res, next) => {
+  console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - Origin: ${req.headers.origin || 'Unknown'}`);
+  next();
+});
 
 // ── Connect Redis -------------------------------------------------
 redis.connect().catch(console.error);

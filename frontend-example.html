@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Test Frontend</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .result {
+            background-color: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 15px;
+            margin-top: 15px;
+            white-space: pre-wrap;
+            font-family: monospace;
+        }
+        .error {
+            background-color: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .success {
+            background-color: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔗 API Test Frontend</h1>
+    <p>Contoh frontend untuk testing backend API dari folder berbeda</p>
+
+    <!-- Health Check -->
+    <div class="container">
+        <h2>🏥 Health Check</h2>
+        <button onclick="testHealthCheck()">Test API Health</button>
+        <div id="healthResult" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Auth Test -->
+    <div class="container">
+        <h2>🔐 Authentication Test</h2>
+        <div class="form-group">
+            <label for="email">Email:</label>
+            <input type="email" id="email" value="test@example.com">
+        </div>
+        <div class="form-group">
+            <label for="password">Password:</label>
+            <input type="password" id="password" value="password123">
+        </div>
+        <button onclick="testLogin()">Test Login</button>
+        <button onclick="testRegister()">Test Register</button>
+        <div id="authResult" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Chat Test -->
+    <div class="container">
+        <h2>💬 Chat Test</h2>
+        <div class="form-group">
+            <label for="message">Message:</label>
+            <textarea id="message" rows="3" placeholder="Enter your message here...">Hello, this is a test message!</textarea>
+        </div>
+        <button onclick="testSendMessage()">Send Message</button>
+        <button onclick="testGetHistory()">Get Chat History</button>
+        <div id="chatResult" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Topic Test -->
+    <div class="container">
+        <h2>📚 Topic Test</h2>
+        <button onclick="testGetTopics()">Get All Topics</button>
+        <div id="topicResult" class="result" style="display: none;"></div>
+    </div>
+
+    <!-- Session Test -->
+    <div class="container">
+        <h2>🎯 Session Test</h2>
+        <div class="form-group">
+            <label for="topicId">Topic ID:</label>
+            <input type="text" id="topicId" value="test-topic-id">
+        </div>
+        <button onclick="testCreateSession()">Create Session</button>
+        <button onclick="testGetSession()">Get Session</button>
+        <div id="sessionResult" class="result" style="display: none;"></div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:3000/api';
+
+        // Utility function untuk API calls
+        async function apiCall(endpoint, options = {}) {
+            const url = `${API_BASE_URL}${endpoint}`;
+            const config = {
+                method: 'GET',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                credentials: 'include',
+                ...options,
+            };
+
+            if (options.body) {
+                config.body = JSON.stringify(options.body);
+            }
+
+            try {
+                const response = await fetch(url, config);
+                const data = await response.json();
+                
+                return {
+                    success: response.ok,
+                    status: response.status,
+                    data: data
+                };
+            } catch (error) {
+                return {
+                    success: false,
+                    error: error.message
+                };
+            }
+        }
+
+        // Utility function untuk menampilkan hasil
+        function showResult(elementId, result, isError = false) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `result ${isError ? 'error' : 'success'}`;
+            element.textContent = JSON.stringify(result, null, 2);
+        }
+
+        // Health Check
+        async function testHealthCheck() {
+            try {
+                const response = await fetch('http://localhost:3000/');
+                const data = await response.json();
+                showResult('healthResult', { success: true, data });
+            } catch (error) {
+                showResult('healthResult', { success: false, error: error.message }, true);
+            }
+        }
+
+        // Auth Tests
+        async function testLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            const result = await apiCall('/auth/login', {
+                method: 'POST',
+                body: { email, password }
+            });
+            
+            showResult('authResult', result, !result.success);
+        }
+
+        async function testRegister() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            const result = await apiCall('/auth/register', {
+                method: 'POST',
+                body: { 
+                    name: 'Test User',
+                    age: 25,
+                    email, 
+                    password 
+                }
+            });
+            
+            showResult('authResult', result, !result.success);
+        }
+
+        // Chat Tests
+        async function testSendMessage() {
+            const message = document.getElementById('message').value;
+            
+            const result = await apiCall('/chat/send', {
+                method: 'POST',
+                body: { message }
+            });
+            
+            showResult('chatResult', result, !result.success);
+        }
+
+        async function testGetHistory() {
+            const result = await apiCall('/chat/history');
+            showResult('chatResult', result, !result.success);
+        }
+
+        // Topic Tests
+        async function testGetTopics() {
+            const result = await apiCall('/topic');
+            showResult('topicResult', result, !result.success);
+        }
+
+        // Session Tests
+        async function testCreateSession() {
+            const topicId = document.getElementById('topicId').value;
+            
+            const result = await apiCall('/session/create', {
+                method: 'POST',
+                body: { topicId }
+            });
+            
+            showResult('sessionResult', result, !result.success);
+        }
+
+        async function testGetSession() {
+            const sessionId = '1'; // Test dengan session ID 1
+            
+            const result = await apiCall(`/session/${sessionId}`);
+            showResult('sessionResult', result, !result.success);
+        }
+
+        // Auto test health check on page load
+        window.onload = function() {
+            console.log('🚀 Frontend loaded, testing API connection...');
+            testHealthCheck();
+        };
+    </script>
+</body>
+</html> 

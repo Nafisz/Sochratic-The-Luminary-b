@@ -1,4 +1,151 @@
-# API Documentation
+# API Documentation - Sochratic The Luminary
+
+## Session Management Flow
+
+### New Session Management Logic
+
+Sistem sekarang menggunakan logika berikut untuk mengelola sesi:
+
+1. **Sesi Dimulai**: Sesi dibuat dengan status `IN_PROGRESS` dan disimpan di Redis
+   - **Otomatis membersihkan** sesi yang sedang berjalan sebelumnya untuk user yang sama
+2. **Sesi Berjalan**: Percakapan hanya disimpan di Redis, tidak di database atau Qdrant
+3. **Sesi Selesai**: Jika user menyelesaikan sampai tahap pembagian exp, sesi disimpan ke database dan Qdrant
+4. **Sesi Ditinggalkan**: Jika user tidak menyelesaikan, sesi **DIHAPUS SEPENUHNYA** dari Redis dan PostgreSQL
+
+### Alur Detail:
+
+```
+1. User Memilih Topik
+   ↓
+2. POST /api/session
+   ├─ Cleanup existing sessions (Redis + PostgreSQL)
+   ├─ Create new session (status: IN_PROGRESS)
+   └─ Save to Redis
+   ↓
+3. Chat dalam Sesi (hanya di Redis)
+   ↓
+4. User Menyelesaikan?
+   ├─ Ya → POST /api/exp/complete/:sessionId
+   │        ↓
+   │        - AI Analysis untuk EXP
+   │        - Embedding ke Qdrant
+   │        - Save ke Database (status: COMPLETED)
+   │        - Clear Redis
+   │
+   └─ Tidak → POST /api/session/:id/abandon
+              ↓
+              - DELETE dari Redis
+              - DELETE dari PostgreSQL
+              - Tidak ada trace sama sekali
+```
+
+### Endpoints
+
+#### Session Management
+
+**POST /api/session**
+- Membuat sesi baru dengan status `IN_PROGRESS`
+- **Otomatis membersihkan** sesi yang sedang berjalan sebelumnya untuk user yang sama
+- Body: `{ userId, topicId, conversationLog? }`
+- Response: `{ session, message }`
+
+**POST /api/session/:id/abandon**
+- **Menghapus sesi sepenuhnya** dari Redis dan PostgreSQL
+- Tidak ada trace sama sekali di sistem
+- Response: `{ success: true, sessionId, message }`
+
+**GET /api/session/:id/status**
+- Mengecek apakah sesi masih berjalan
+- Response: `{ sessionId, inProgress, message }`
+
+**GET /api/session/:id/summary**
+- Mendapatkan ringkasan sesi dari Redis
+- Response: `{ sessionId, messageCount, hasData, preview }`
+
+#### Experience Points
+
+**POST /api/exp/complete/:sessionId**
+- Menyelesaikan sesi dan memberikan exp
+- Body: `{ userId, topicId }`
+- Proses:
+  1. Analisis AI untuk exp points
+  2. Embedding ke Qdrant
+  3. Simpan ke database
+  4. Update status sesi menjadi `COMPLETED`
+  5. Hapus dari Redis
+- Response: `{ success, sessionId, expPoints, totalExp, level, message }`
+
+**GET /api/exp/completed-sessions/:userId**
+- Mendapatkan daftar sesi yang sudah selesai
+- Response: `{ success, completedSessions, count }`
+
+**GET /api/exp/user/:userId**
+- Dashboard exp user (hanya sesi yang selesai)
+- Response: `{ dashboard, totalExp, level, currentExpInLevel, nextLevelExp, completedSessionsCount }`
+
+#### Chat
+
+**POST /api/chat/message**
+- Mengirim pesan dalam sesi
+- Body: `{ topicId, message, userId, sessionId, mode? }`
+- Response: `{ reply }`
+
+### Frontend Integration
+
+#### Untuk menampilkan topik yang terselesaikan:
+
+```javascript
+// Ambil sesi yang sudah selesai
+const response = await fetch(`/api/exp/completed-sessions/${userId}`);
+const { completedSessions } = await response.json();
+
+// Tampilkan di frontend
+completedSessions.forEach(session => {
+  console.log(`Topik: ${session.topicTitle}`);
+  console.log(`Kursus: ${session.courseTitle}`);
+  console.log(`Selesai: ${session.completedAt}`);
+  console.log(`Total EXP: ${session.totalExp}`);
+});
+```
+
+#### Untuk menyelesaikan sesi:
+
+```javascript
+// Ketika user selesai belajar dan ingin mendapatkan exp
+const response = await fetch(`/api/exp/complete/${sessionId}`, {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ userId, topicId })
+});
+
+const result = await response.json();
+// result akan berisi exp points, level, dll
+```
+
+#### Untuk meninggalkan sesi:
+
+```javascript
+// Ketika user meninggalkan sesi tanpa menyelesaikan
+const response = await fetch(`/api/session/${sessionId}/abandon`, {
+  method: 'POST'
+});
+
+const result = await response.json();
+// Sesi akan dihapus dari Redis tanpa disimpan ke database
+```
+
+### Database Schema Updates
+
+Model `Session` sekarang memiliki field tambahan:
+- `status`: `IN_PROGRESS`, `COMPLETED`, atau `ABANDONED`
+- `completedAt`: Timestamp kapan sesi selesai
+
+### Keuntungan Sistem Baru
+
+1. **Efisiensi Storage**: Hanya sesi yang selesai yang disimpan ke database
+2. **Kualitas Data**: Data di Qdrant hanya dari sesi yang bermakna
+3. **User Experience**: User bisa melihat progress yang sebenarnya
+4. **Performance**: Mengurangi beban database dan Qdrant
 
 ## Overview
 This API provides a comprehensive learning system with automatic mode switching, session-based analysis, and intelligent AI responses.
