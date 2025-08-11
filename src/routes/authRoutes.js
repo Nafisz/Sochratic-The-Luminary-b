@@ -1,6 +1,9 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 
+// In-memory storage (for development without database)
+const users = [];
+
 module.exports = (prisma) => {
   const router = express.Router();
 
@@ -13,11 +16,10 @@ module.exports = (prisma) => {
     }
 
     try {
-      const existingUser = await prisma.user.findFirst({
-        where: {
-          OR: [{ email }, { username }]
-        }
-      });
+      // Check if user already exists in memory
+      const existingUser = users.find(user => 
+        user.email === email || user.username === username
+      );
 
       if (existingUser) {
         return res.status(409).json({ error: 'Email or username already exists' });
@@ -25,15 +27,17 @@ module.exports = (prisma) => {
 
       const hashedPassword = await bcrypt.hash(password, 10);
 
-      const newUser = await prisma.user.create({
-        data: {
-          name,
-          email,
-          username,
-          password: hashedPassword,
-          age: parseInt(age),
-        },
-      });
+      const newUser = {
+        id: users.length + 1,
+        name,
+        email,
+        username,
+        password: hashedPassword,
+        age: parseInt(age),
+        createdAt: new Date()
+      };
+
+      users.push(newUser);
 
       // Don't send password to client
       const { password: _, ...safeUser } = newUser;
@@ -53,9 +57,9 @@ module.exports = (prisma) => {
     }
 
     try {
-      const user = await prisma.user.findFirst({
-        where: email ? { email } : { username }
-      });
+      const user = users.find(user => 
+        email ? user.email === email : user.username === username
+      );
 
       if (!user) {
         return res.status(401).json({ error: 'User not found' });

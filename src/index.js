@@ -8,6 +8,7 @@ const express = require('express');
 const cors = require('cors');
 const { PrismaClient } = require('@prisma/client');
 const { createClient } = require('redis');
+const paymentRoutes = require('./routes/paymentRoutes');
 
 // ── Import route-factories -----------------------------------------
 const authRoutes    = require('./routes/authRoutes');
@@ -23,7 +24,6 @@ const redis  = createClient({ url: process.env.REDIS_URL || 'redis://redis:6379'
 
 // ── Middleware ----------------------------------------------------
 app.use(cors());
-app.use(express.json());
 
 // ── Connect Redis -------------------------------------------------
 redis.connect().catch(console.error);
@@ -37,6 +37,14 @@ const openai = new OpenAI({
   apiKey: process.env.COMET_API_KEY,
   baseURL: process.env.COMET_API_BASE_URL || 'https://api.openai.com/v1',
 });
+
+// Stripe requires the raw body for webhook signature verification.
+// Mount webhook BEFORE json body parser.
+const payment = paymentRoutes(prisma);
+app.post('/api/payment/webhook', express.raw({ type: 'application/json' }), payment.webhookHandler);
+
+// JSON parser for the rest of the routes
+app.use(express.json());
 
 app.post('/test-comet', async (req, res) => {
   try {
@@ -80,6 +88,7 @@ app.use('/api/chat',    chatRoutes(prisma));
 app.use('/api/exp',     expRoutes(prisma));
 app.use('/api/session', sessionRoutes(prisma));
 app.use('/api/topic',   topicRoutes(prisma));
+app.use('/api/payment', payment.router);
 
 // ── Boot ----------------------------------------------------------
 const PORT = process.env.PORT || 3000;
