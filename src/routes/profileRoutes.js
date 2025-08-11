@@ -1,175 +1,103 @@
+// routes/profileRoutes.js
 const express = require('express');
 const { authenticateToken } = require('../middleware/jwtMiddleware');
 
 module.exports = (prisma) => {
   const router = express.Router();
-  
-  console.log('�� === PROFILE ROUTES INITIALIZATION ===');
-  console.log('📅 Timestamp:', new Date().toISOString());
-  console.log('�� Prisma instance:', !!prisma);
-  
-  // Import ProfileService dengan prisma instance
+
+  console.log('🚀 === PROFILE ROUTES INITIALIZED ===', new Date().toISOString());
+
+  // Load service
   const ProfileService = require('../services/profileService');
   const profileService = new ProfileService(prisma);
-  console.log('✅ ProfileService instantiated successfully');
 
   /**
    * @route   GET /api/profile
    * @desc    Get user profile
-   * @access  Private (JWT required)
+   * @access  Private
    */
   router.get('/', authenticateToken, async (req, res) => {
-    console.log('🔐 === PROFILE ROUTE HANDLER EXECUTED ===');
-    console.log('📅 Timestamp:', new Date().toISOString());
-    console.log('👤 User from middleware:', req.user);
-    console.log('🆔 User ID:', req.user?.id);
-    console.log('�� Request headers:', req.headers);
-    
     try {
       const userId = req.user.id;
-      console.log('🎯 Fetching profile for user ID:', userId);
-      
-      console.log('⏳ Calling profileService.getUserProfile...');
-      const profile = await profileService.getUserProfile(userId);
-      console.log('✅ Profile data retrieved successfully:', profile);
-      
-      const response = {
-        success: true,
-        data: profile
-      };
-      console.log('📤 Sending response:', response);
-      
-      res.json(response);
-      console.log('✅ Response sent successfully');
-      
+      console.log(`🔍 Fetching profile for user ID: ${userId}`);
+
+      // Bisa pilih mau pakai service atau query langsung
+      const profile = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          email: true,
+          age: true,
+          createdAt: true
+        }
+      });
+
+      if (!profile) {
+        return res.status(404).json({ success: false, message: 'User not found' });
+      }
+
+      res.json({ success: true, data: profile });
     } catch (error) {
-      console.error('❌ === PROFILE ERROR IN ROUTE HANDLER ===');
-      console.error('🚨 Error type:', error.constructor.name);
-      console.error('🚨 Error message:', error.message);
-      console.error('🚨 Error stack:', error.stack);
-      console.error('🚨 Full error object:', error);
-      
-      const errorResponse = {
-        success: false,
-        message: error.message
-      };
-      console.log('📤 Sending error response:', errorResponse);
-      
-      res.status(400).json(errorResponse);
-      console.log('✅ Error response sent');
+      console.error('❌ GET /api/profile error:', error);
+      res.status(500).json({ success: false, message: error.message });
     }
   });
 
   /**
    * @route   PUT /api/profile
    * @desc    Update user profile
-   * @access  Private (JWT required)
+   * @access  Private
    */
   router.put('/', authenticateToken, async (req, res) => {
-    console.log('✏️ === PROFILE UPDATE ROUTE HANDLER EXECUTED ===');
-    console.log('📅 Timestamp:', new Date().toISOString());
-    console.log('👤 User from middleware:', req.user);
-    console.log('🆔 User ID:', req.user?.id);
-    console.log('�� Update data:', req.body);
-    
     try {
       const userId = req.user.id;
       const updateData = req.body;
-      
-      console.log('⏳ Calling profileService.updateUserProfile...');
+      console.log(`✏️ Updating profile for user ID: ${userId}`, updateData);
+
       const updatedProfile = await profileService.updateUserProfile(userId, updateData);
-      console.log('✅ Profile updated successfully:', updatedProfile);
-      
-      const response = {
+      res.json({
         success: true,
         message: 'Profile updated successfully',
         data: updatedProfile
-      };
-      console.log('📤 Sending response:', response);
-      
-      res.json(response);
-      console.log('✅ Update response sent successfully');
-      
+      });
     } catch (error) {
-      console.error('❌ === PROFILE UPDATE ERROR IN ROUTE HANDLER ===');
-      console.error('🚨 Error type:', error.constructor.name);
-      console.error('🚨 Error message:', error.message);
-      console.error('🚨 Error stack:', error.stack);
-      
-      const errorResponse = {
-        success: false,
-        message: error.message
-      };
-      console.log('📤 Sending error response:', errorResponse);
-      
-      res.status(400).json(errorResponse);
-      console.log('✅ Error response sent');
+      console.error('❌ PUT /api/profile error:', error);
+      res.status(400).json({ success: false, message: error.message });
     }
   });
 
   /**
    * @route   GET /api/profile/stats
    * @desc    Get user statistics
-   * @access  Private (JWT required)
+   * @access  Private
    */
   router.get('/stats', authenticateToken, async (req, res) => {
-    console.log('📊 === PROFILE STATS ROUTE HANDLER EXECUTED ===');
-    console.log('📅 Timestamp:', new Date().toISOString());
-    console.log('👤 User from middleware:', req.user);
-    console.log('🆔 User ID:', req.user?.id);
-    
     try {
       const userId = req.user.id;
-      console.log('⏳ Calling profileService.getUserStats...');
-      
+      console.log(`📊 Getting stats for user ID: ${userId}`);
+
       const stats = await profileService.getUserStats(userId);
-      console.log('✅ Stats retrieved successfully:', stats);
-      
-      const response = {
-        success: true,
-        data: stats
-      };
-      console.log('📤 Sending response:', response);
-      
-      res.json(response);
-      console.log('✅ Stats response sent successfully');
-      
+      res.json({ success: true, data: stats });
     } catch (error) {
-      console.error('❌ === PROFILE STATS ERROR IN ROUTE HANDLER ===');
-      console.error('🚨 Error type:', error.constructor.name);
-      console.error('🚨 Error message:', error.message);
-      console.error('🚨 Error stack:', error.stack);
-      
-      const errorResponse = {
-        success: false,
-        message: error.message
-      };
-      console.log('📤 Sending error response:', errorResponse);
-      
-      res.status(400).json(errorResponse);
-      console.log('✅ Error response sent');
+      console.error('❌ GET /api/profile/stats error:', error);
+      res.status(400).json({ success: false, message: error.message });
     }
   });
 
   /**
    * @route   GET /api/profile/test
-   * @desc    Test endpoint without middleware
+   * @desc    Test endpoint
    * @access  Public
    */
   router.get('/test', (req, res) => {
-    console.log('�� === PROFILE TEST ROUTE HANDLER EXECUTED ===');
-    console.log('📅 Timestamp:', new Date().toISOString());
-    console.log('�� Request headers:', req.headers);
-    console.log('🌐 Origin:', req.headers.origin);
-    
-    res.json({ 
+    res.json({
       message: 'Profile route works!',
       timestamp: new Date().toISOString(),
       headers: req.headers
     });
-    console.log('✅ Test response sent');
   });
 
-  console.log('✅ All profile routes registered successfully');
   return router;
 };
