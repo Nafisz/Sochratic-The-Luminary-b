@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile API Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #fafafa;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+            color: #555;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .response {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            font-family: monospace;
+            white-space: pre-wrap;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .success {
+            background: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .info {
+            background: #d1ecf1;
+            border: 1px solid #bee5eb;
+            color: #0c5460;
+        }
+        .profile-display {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .profile-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+        }
+        .profile-card h4 {
+            margin: 0 0 10px 0;
+            color: #333;
+        }
+        .profile-card p {
+            margin: 5px 0;
+            color: #666;
+        }
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-top: 20px;
+        }
+        .stat-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            text-align: center;
+        }
+        .stat-value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #007bff;
+        }
+        .stat-label {
+            color: #666;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔐 Profile API Test</h1>
+        
+        <!-- JWT Token Input -->
+        <div class="section">
+            <h3>JWT Token</h3>
+            <div class="form-group">
+                <label for="jwtToken">JWT Token:</label>
+                <input type="text" id="jwtToken" placeholder="Masukkan JWT token Anda" style="font-family: monospace;">
+            </div>
+            <button onclick="testJWT()">Test JWT Token</button>
+            <div id="jwtResponse" class="response" style="display: none;"></div>
+        </div>
+
+        <!-- Get Profile -->
+        <div class="section">
+            <h3>📋 Get User Profile</h3>
+            <button onclick="getProfile()" id="getProfileBtn">Get Profile</button>
+            <div id="profileResponse" class="response" style="display: none;"></div>
+            <div id="profileDisplay" class="profile-display" style="display: none;"></div>
+        </div>
+
+        <!-- Update Profile -->
+        <div class="section">
+            <h3>✏️ Update User Profile</h3>
+            <div class="form-group">
+                <label for="updateName">Name:</label>
+                <input type="text" id="updateName" placeholder="Masukkan nama baru">
+            </div>
+            <div class="form-group">
+                <label for="updateUsername">Username:</label>
+                <input type="text" id="updateUsername" placeholder="Masukkan username baru">
+            </div>
+            <div class="form-group">
+                <label for="updateAge">Age:</label>
+                <input type="number" id="updateAge" placeholder="Masukkan usia baru">
+            </div>
+            <button onclick="updateProfile()" id="updateProfileBtn">Update Profile</button>
+            <div id="updateResponse" class="response" style="display: none;"></div>
+        </div>
+
+        <!-- Get Stats -->
+        <div class="section">
+            <h3>📊 Get User Statistics</h3>
+            <button onclick="getStats()" id="getStatsBtn">Get Statistics</button>
+            <div id="statsResponse" class="response" style="display: none;"></div>
+            <div id="statsDisplay" class="stats-grid" style="display: none;"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api/profile';
+        
+        // Get JWT token from input
+        function getJWTToken() {
+            const token = document.getElementById('jwtToken').value.trim();
+            if (!token) {
+                throw new Error('JWT token diperlukan');
+            }
+            return token;
+        }
+
+        // Display response
+        function displayResponse(elementId, data, isSuccess = true) {
+            const element = document.getElementById(elementId);
+            element.style.display = 'block';
+            element.className = `response ${isSuccess ? 'success' : 'error'}`;
+            element.textContent = JSON.stringify(data, null, 2);
+        }
+
+        // Test JWT token
+        async function testJWT() {
+            try {
+                const token = getJWTToken();
+                const response = await fetch(`${API_BASE}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayResponse('jwtResponse', { message: 'JWT token valid!', profile: data.data }, true);
+                } else {
+                    displayResponse('jwtResponse', { error: data.message }, false);
+                }
+            } catch (error) {
+                displayResponse('jwtResponse', { error: error.message }, false);
+            }
+        }
+
+        // Get user profile
+        async function getProfile() {
+            try {
+                const token = getJWTToken();
+                const response = await fetch(`${API_BASE}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayResponse('profileResponse', data, true);
+                    displayProfile(data.data);
+                } else {
+                    displayResponse('profileResponse', data, false);
+                }
+            } catch (error) {
+                displayResponse('profileResponse', { error: error.message }, false);
+            }
+        }
+
+        // Display profile data
+        function displayProfile(profile) {
+            const display = document.getElementById('profileDisplay');
+            display.style.display = 'grid';
+            
+            display.innerHTML = `
+                <div class="profile-card">
+                    <h4>👤 Basic Info</h4>
+                    <p><strong>ID:</strong> ${profile.id}</p>
+                    <p><strong>Name:</strong> ${profile.name}</p>
+                    <p><strong>Username:</strong> ${profile.username}</p>
+                    <p><strong>Age:</strong> ${profile.age}</p>
+                    <p><strong>Email:</strong> ${profile.email}</p>
+                </div>
+                <div class="profile-card">
+                    <h4>📅 Created At</h4>
+                    <p><strong>Month:</strong> ${profile.createdAt.month}</p>
+                    <p><strong>Year:</strong> ${profile.createdAt.year}</p>
+                </div>
+                <div class="profile-card">
+                    <h4>🧠 Intelligence Progress</h4>
+                    ${profile.intelligenceProgress.map(progress => 
+                        `<p><strong>${progress.type}:</strong> Level ${progress.level} (${progress.exp} exp)</p>`
+                    ).join('')}
+                </div>
+            `;
+        }
+
+        // Update user profile
+        async function updateProfile() {
+            try {
+                const token = getJWTToken();
+                const name = document.getElementById('updateName').value.trim();
+                const username = document.getElementById('updateUsername').value.trim();
+                const age = document.getElementById('updateAge').value.trim();
+                
+                const updateData = {};
+                if (name) updateData.name = name;
+                if (username) updateData.username = username;
+                if (age) updateData.age = parseInt(age);
+                
+                if (Object.keys(updateData).length === 0) {
+                    throw new Error('Minimal satu field harus diisi');
+                }
+                
+                const response = await fetch(`${API_BASE}`, {
+                    method: 'PUT',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(updateData)
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayResponse('updateResponse', data, true);
+                    // Refresh profile display
+                    setTimeout(getProfile, 1000);
+                } else {
+                    displayResponse('updateResponse', data, false);
+                }
+            } catch (error) {
+                displayResponse('updateResponse', { error: error.message }, false);
+            }
+        }
+
+        // Get user statistics
+        async function getStats() {
+            try {
+                const token = getJWTToken();
+                const response = await fetch(`${API_BASE}/stats`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    displayResponse('statsResponse', data, true);
+                    displayStats(data.data);
+                } else {
+                    displayResponse('statsResponse', data, false);
+                }
+            } catch (error) {
+                displayResponse('statsResponse', { error: error.message }, false);
+            }
+        }
+
+        // Display statistics
+        function displayStats(stats) {
+            const display = document.getElementById('statsDisplay');
+            display.style.display = 'grid';
+            
+            display.innerHTML = `
+                <div class="stat-card">
+                    <div class="stat-value">${stats.totalSessions}</div>
+                    <div class="stat-label">Total Sessions</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-value">${stats.totalExperience}</div>
+                    <div class="stat-label">Total Experience</div>
+                </div>
+                ${stats.intelligenceLevels.map(level => `
+                    <div class="stat-card">
+                        <div class="stat-value">${level.level}</div>
+                        <div class="stat-label">${level.type}</div>
+                        <div class="stat-label">${level.exp} exp</div>
+                    </div>
+                `).join('')}
+            `;
+        }
+
+        // Auto-test JWT when token is entered
+        document.getElementById('jwtToken').addEventListener('input', function() {
+            const token = this.value.trim();
+            if (token.length > 50) { // Basic JWT length check
+                setTimeout(testJWT, 500); // Auto-test after 500ms delay
+            }
+        });
+    </script>
+</body>
+</html>

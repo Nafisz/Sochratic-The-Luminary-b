@@ -15,6 +15,8 @@ const chatRoutes    = require('./routes/chatRoutes');
 const expRoutes     = require('./routes/expRoutes');
 const sessionRoutes = require('./routes/sessionRoutes');
 const topicRoutes   = require('./routes/topicRoutes');
+const protectedRoutes = require('./routes/protectedRoutes');
+const profileRoutes = require('./routes/profileRoutes');
 
 // ── Instance setup ------------------------------------------------
 const app    = express();
@@ -64,6 +66,8 @@ app.use('/api/chat',    chatRoutes(prisma));
 app.use('/api/exp',     expRoutes(prisma));
 app.use('/api/session', sessionRoutes(prisma));
 app.use('/api/topic',   topicRoutes(prisma));
+app.use('/api/protected', protectedRoutes(prisma));
+app.use('/api/profile', profileRoutes(prisma));
 
 // ── Boot ----------------------------------------------------------
 const PORT = process.env.PORT || 3000;
