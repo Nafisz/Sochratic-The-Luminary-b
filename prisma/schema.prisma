@@ -16,7 +16,10 @@ model User {
   password          String
   age               Int
   email             String              @unique
+  bio               String?             // User biography/description
+  profilePhoto      String?             // URL or path to profile photo
   createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
   sessions          Session[]
   userIntelProgress UserIntelProgress[]
 }

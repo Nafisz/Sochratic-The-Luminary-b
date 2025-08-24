@@ -1,7 +1,7 @@
-# Profile API Documentation
+# Profile Management API Documentation
 
 ## Overview
-Profile API menyediakan endpoint untuk mengelola profil pengguna dengan fitur JWT authentication. API ini memungkinkan pengguna untuk melihat dan mengubah informasi profil mereka.
+This API provides comprehensive profile management functionality including bio, profile photo, and real-time online/offline status using Prisma (PostgreSQL) for persistent data and Redis for real-time status tracking.
 
 ## Base URL
 ```
@@ -9,7 +9,7 @@ http://localhost:3000/api/profile
 ```
 
 ## Authentication
-Semua endpoint memerlukan JWT token yang valid di header Authorization:
+All endpoints require JWT authentication. Include the token in the Authorization header:
 ```
 Authorization: Bearer <your-jwt-token>
 ```
@@ -17,16 +17,11 @@ Authorization: Bearer <your-jwt-token>
 ## Endpoints
 
 ### 1. Get User Profile
-**GET** `/api/profile`
+**GET** `/profile`
 
-Mengambil data profil pengguna yang sedang login.
+Retrieves the current user's profile information including bio, profile photo, and online status.
 
-**Headers:**
-```
-Authorization: Bearer <jwt-token>
-```
-
-**Response Success (200):**
+**Response:**
 ```json
 {
   "success": true,
@@ -34,223 +29,478 @@ Authorization: Bearer <jwt-token>
     "id": 1,
     "name": "John Doe",
     "username": "johndoe",
-    "age": 25,
     "email": "john@example.com",
-    "createdAt": {
-      "month": 12,
-      "year": 2024
-    },
-    "intelligenceProgress": [
-      {
-        "type": "Clarity",
-        "exp": 150,
-        "level": 3
-      },
-      {
-        "type": "Accuracy",
-        "exp": 200,
-        "level": 4
-      }
-    ]
+    "age": 25,
+    "bio": "Software developer passionate about AI",
+    "profilePhoto": "https://example.com/photo.jpg",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T00:00:00.000Z",
+    "isOnline": true
   }
-}
-```
-
-**Response Error (400):**
-```json
-{
-  "success": false,
-  "message": "User not found"
 }
 ```
 
 ### 2. Update User Profile
-**PUT** `/api/profile`
+**PUT** `/profile`
 
-Mengubah data profil pengguna.
-
-**Headers:**
-```
-Authorization: Bearer <jwt-token>
-Content-Type: application/json
-```
+Updates the user's bio and/or profile photo.
 
 **Request Body:**
 ```json
 {
-  "name": "John Smith",
-  "username": "johnsmith",
-  "age": 26
+  "bio": "Updated bio text",
+  "profilePhoto": "https://example.com/new-photo.jpg"
 }
 ```
 
-**Response Success (200):**
+**Response:**
 ```json
 {
   "success": true,
-  "message": "Profile updated successfully",
   "data": {
     "id": 1,
-    "name": "John Smith",
-    "username": "johnsmith",
-    "age": 26,
+    "name": "John Doe",
+    "username": "johndoe",
     "email": "john@example.com",
-    "createdAt": {
-      "month": 12,
-      "year": 2024
-    }
-  }
+    "age": 25,
+    "bio": "Updated bio text",
+    "profilePhoto": "https://example.com/new-photo.jpg",
+    "createdAt": "2024-01-01T00:00:00.000Z",
+    "updatedAt": "2024-01-01T12:00:00.000Z"
+  },
+  "message": "Profile updated successfully"
 }
 ```
 
-**Response Error (400):**
+### 3. Set User Online Status
+**POST** `/status/online`
+
+Sets the user's status to online.
+
+**Response:**
 ```json
 {
-  "success": false,
-  "message": "Username already taken"
+  "success": true,
+  "message": "User online"
 }
 ```
 
-### 3. Get User Statistics
-**GET** `/api/profile/stats`
+### 4. Set User Offline Status
+**POST** `/status/offline`
 
-Mengambil statistik pengguna termasuk jumlah sesi dan progress intelligence.
+Sets the user's status to offline.
 
-**Headers:**
+**Response:**
+```json
+{
+  "success": true,
+  "message": "User offline"
+}
 ```
-Authorization: Bearer <jwt-token>
-```
 
-**Response Success (200):**
+### 5. Get User Status
+**GET** `/status`
+
+Retrieves the current user's online/offline status and last seen timestamp.
+
+**Response:**
 ```json
 {
   "success": true,
   "data": {
-    "totalSessions": 15,
-    "totalExperience": 1250,
-    "intelligenceLevels": [
-      {
-        "type": "Clarity",
-        "level": 3,
-        "exp": 150
-      },
-      {
-        "type": "Accuracy",
-        "level": 4,
-        "exp": 200
-      }
-    ]
+    "status": "online",
+    "lastSeen": "2024-01-01T12:00:00.000Z"
   }
 }
 ```
 
-## Data Structure
+### 6. Send Heartbeat
+**POST** `/heartbeat`
 
-### Profile Object
+Sends a heartbeat to keep the user's online status active. Useful for maintaining online presence.
+
+**Response:**
 ```json
 {
-  "id": "number",
-  "name": "string",
-  "username": "string",
-  "age": "number",
-  "email": "string",
-  "createdAt": {
-    "month": "number (1-12)",
-    "year": "number"
-  },
-  "intelligenceProgress": [
-    {
-      "type": "string (enum: Clarity, Accuracy, Precision, Relevance, Depth, Breadth, Logic, Significance, Fairness)",
-      "exp": "number",
-      "level": "number"
-    }
-  ]
+  "success": true,
+  "message": "Heartbeat received"
 }
 ```
 
-### Update Profile Fields
-- `name` (optional): Nama lengkap pengguna
-- `username` (optional): Username unik
-- `age` (optional): Usia pengguna
+### 7. Get Online Users
+**GET** `/online-users`
+
+Retrieves a list of all currently online users. This endpoint is public and doesn't require authentication.
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": [
+    {
+      "id": 1,
+      "name": "John Doe",
+      "username": "johndoe",
+      "profilePhoto": "https://example.com/photo.jpg"
+    },
+    {
+      "id": 2,
+      "name": "Jane Smith",
+      "username": "janesmith",
+      "profilePhoto": null
+    }
+  ],
+  "count": 2
+}
+```
+
+## Data Models
+
+### User Profile (Prisma)
+```prisma
+model User {
+  id                Int                 @id @default(autoincrement())
+  name              String
+  username          String              @unique
+  password          String
+  age               Int
+  email             String              @unique
+  bio               String?             // User biography/description
+  profilePhoto      String?             // URL or path to profile photo
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  // ... other fields
+}
+```
+
+### Online Status (Redis)
+```json
+{
+  "status": "online|offline",
+  "lastSeen": "ISO-8601 timestamp"
+}
+```
+
+## Redis Key Structure
+
+### User Status
+- **Key:** `user:{userId}:status`
+- **TTL:** 300 seconds (5 minutes) for online, 86400 seconds (24 hours) for offline
+- **Value:** JSON string with status and lastSeen
+
+### Online Users List
+- **Key:** `online_users`
+- **Type:** Set
+- **TTL:** 300 seconds (5 minutes)
+- **Value:** Set of user IDs currently online
+
+## Implementation Details
+
+### Online Status Management
+1. **Online Status:** Set with 5-minute TTL, automatically expires if no heartbeat
+2. **Offline Status:** Set with 24-hour TTL for historical tracking
+3. **Heartbeat System:** Extends online status TTL by 5 minutes
+4. **Auto-cleanup:** Expired online statuses are automatically removed
+
+### Profile Photo Storage
+- Store URLs or file paths in the database
+- No file upload handling in this API (implement separately)
+- Supports any image format accessible via URL
+
+### Bio Management
+- Text field with no length restrictions
+- HTML/special characters should be sanitized on frontend
+- Supports markdown-style formatting (if needed)
 
 ## Error Handling
 
-### Common Error Messages
-- `"User not found"` - User ID tidak ditemukan
-- `"Username already taken"` - Username sudah digunakan user lain
-- `"No valid fields to update"` - Tidak ada field yang valid untuk diupdate
-- `"Failed to get user profile"` - Gagal mengambil profil user
-- `"Failed to update user profile"` - Gagal mengupdate profil user
-- `"Failed to get user stats"` - Gagal mengambil statistik user
+### Common Error Responses
 
-### HTTP Status Codes
-- `200` - Success
-- `400` - Bad Request (validation error)
-- `401` - Unauthorized (JWT invalid/missing)
-- `500` - Internal Server Error
+**401 Unauthorized:**
+```json
+{
+  "success": false,
+  "message": "Access token required"
+}
+```
 
-## Example Usage
+**400 Bad Request:**
+```json
+{
+  "success": false,
+  "message": "Bio must be a string"
+}
+```
 
-### JavaScript (Fetch API)
+**500 Internal Server Error:**
+```json
+{
+  "success": false,
+  "message": "Failed to update profile"
+}
+```
+
+## Usage Examples
+
+### Frontend Integration
+
+#### React Example
 ```javascript
-// Get user profile
-const getProfile = async () => {
-  const response = await fetch('http://localhost:3000/api/profile', {
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('jwt-token')}`
-    }
-  });
-  const data = await response.json();
-  return data;
-};
+import { useState, useEffect } from 'react';
 
-// Update user profile
-const updateProfile = async (profileData) => {
-  const response = await fetch('http://localhost:3000/api/profile', {
-    method: 'PUT',
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('jwt-token')}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(profileData)
-  });
-  const data = await response.json();
-  return data;
-};
+const ProfileManager = () => {
+  const [profile, setProfile] = useState(null);
+  const [isOnline, setIsOnline] = useState(false);
 
-// Get user statistics
-const getStats = async () => {
-  const response = await fetch('http://localhost:3000/api/profile/stats', {
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('jwt-token')}`
+  // Get profile
+  const fetchProfile = async () => {
+    try {
+      const response = await fetch('/api/profile/profile', {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      const data = await response.json();
+      setProfile(data.data);
+      setIsOnline(data.data.isOnline);
+    } catch (error) {
+      console.error('Error fetching profile:', error);
     }
-  });
-  const data = await response.json();
-  return data;
+  };
+
+  // Update profile
+  const updateProfile = async (bio, profilePhoto) => {
+    try {
+      const response = await fetch('/api/profile/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({ bio, profilePhoto })
+      });
+      const data = await response.json();
+      if (data.success) {
+        setProfile(data.data);
+      }
+    } catch (error) {
+      console.error('Error updating profile:', error);
+    }
+  };
+
+  // Set online status
+  const goOnline = async () => {
+    try {
+      await fetch('/api/profile/status/online', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      setIsOnline(true);
+    } catch (error) {
+      console.error('Error setting online status:', error);
+    }
+  };
+
+  // Heartbeat system
+  useEffect(() => {
+    if (isOnline) {
+      const interval = setInterval(async () => {
+        try {
+          await fetch('/api/profile/heartbeat', {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+        } catch (error) {
+          console.error('Heartbeat failed:', error);
+          setIsOnline(false);
+        }
+      }, 30000); // Every 30 seconds
+
+      return () => clearInterval(interval);
+    }
+  }, [isOnline]);
+
+  return (
+    <div>
+      {/* Profile display and edit form */}
+    </div>
+  );
 };
 ```
 
-### cURL Examples
+#### Vanilla JavaScript Example
+```javascript
+class ProfileManager {
+  constructor(token) {
+    this.token = token;
+    this.apiBase = '/api/profile';
+  }
+
+  async getProfile() {
+    const response = await fetch(`${this.apiBase}/profile`, {
+      headers: {
+        'Authorization': `Bearer ${this.token}`
+      }
+    });
+    return await response.json();
+  }
+
+  async updateProfile(bio, profilePhoto) {
+    const response = await fetch(`${this.apiBase}/profile`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${this.token}`
+      },
+      body: JSON.stringify({ bio, profilePhoto })
+    });
+    return await response.json();
+  }
+
+  async setOnlineStatus(isOnline) {
+    const endpoint = isOnline ? '/status/online' : '/status/offline';
+    const response = await fetch(`${this.apiBase}${endpoint}`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.token}`
+      }
+    });
+    return await response.json();
+  }
+
+  async sendHeartbeat() {
+    const response = await fetch(`${this.apiBase}/heartbeat`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${this.token}`
+      }
+    });
+    return await response.json();
+  }
+
+  async getOnlineUsers() {
+    const response = await fetch(`${this.apiBase}/online-users`);
+    return await response.json();
+  }
+}
+
+// Usage
+const profileManager = new ProfileManager('your-jwt-token');
+profileManager.getProfile().then(console.log);
+```
+
+## Docker Configuration
+
+### Environment Variables
 ```bash
-# Get profile
-curl -H "Authorization: Bearer <jwt-token>" \
-     http://localhost:3000/api/profile
+# Redis Configuration
+REDIS_URL="redis://localhost:6379"
+REDIS_HOST="localhost"
+REDIS_PORT="6379"
+
+# Database Configuration
+DATABASE_URL="postgresql://username:password@localhost:5432/database_name"
+
+# JWT Configuration
+JWT_SECRET="your-super-secret-jwt-key-here"
+```
+
+### Docker Compose
+```yaml
+services:
+  redis:
+    image: redis:7
+    ports:
+      - "6379:6379"
+  
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_USER: username
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: database_name
+    ports:
+      - "5432:5432"
+```
+
+## Testing
+
+### Test the API
+1. Start the Docker containers: `docker-compose up -d`
+2. Run database migrations: `npm run db:migrate`
+3. Start the server: `npm run dev`
+4. Use the provided HTML example file to test all endpoints
+5. Monitor Redis and PostgreSQL for data persistence
+
+### Manual Testing with curl
+```bash
+# Get profile (requires JWT token)
+curl -H "Authorization: Bearer YOUR_TOKEN" \
+     http://localhost:3000/api/profile/profile
 
 # Update profile
 curl -X PUT \
-     -H "Authorization: Bearer <jwt-token>" \
+     -H "Authorization: Bearer YOUR_TOKEN" \
      -H "Content-Type: application/json" \
-     -d '{"name": "New Name", "age": 27}' \
-     http://localhost:3000/api/profile
+     -d '{"bio":"New bio","profilePhoto":"https://example.com/photo.jpg"}' \
+     http://localhost:3000/api/profile/profile
 
-# Get stats
-curl -H "Authorization: Bearer <jwt-token>" \
-     http://localhost:3000/api/profile/stats
+# Set online status
+curl -X POST \
+     -H "Authorization: Bearer YOUR_TOKEN" \
+     http://localhost:3000/api/profile/status/online
+
+# Get online users (public)
+curl http://localhost:3000/api/profile/online-users
 ```
 
-## Notes
-- Semua endpoint memerlukan JWT token yang valid
-- Field `createdAt` otomatis diisi saat user pertama kali dibuat
-- Username harus unik di seluruh sistem
-- Hanya field `name`, `username`, dan `age` yang dapat diupdate
-- Progress intelligence diambil dari tabel `UserIntelProgress`
+## Security Considerations
+
+1. **JWT Token Validation:** All protected endpoints validate JWT tokens
+2. **Input Validation:** Bio and profile photo inputs are validated
+3. **Redis TTL:** Automatic expiration prevents memory leaks
+4. **CORS Configuration:** Properly configured for frontend integration
+5. **Rate Limiting:** Consider implementing rate limiting for production
+
+## Performance Considerations
+
+1. **Redis TTL:** Efficient cleanup of expired statuses
+2. **Database Indexing:** Ensure proper indexes on user fields
+3. **Connection Pooling:** Prisma handles database connection pooling
+4. **Caching:** Redis provides fast access to online status data
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Redis Connection Failed**
+   - Check if Redis container is running
+   - Verify Redis host/port configuration
+   - Check firewall settings
+
+2. **Database Connection Failed**
+   - Verify PostgreSQL container is running
+   - Check DATABASE_URL environment variable
+   - Ensure database exists and is accessible
+
+3. **JWT Token Invalid**
+   - Check JWT_SECRET environment variable
+   - Verify token format and expiration
+   - Ensure proper Authorization header format
+
+4. **Profile Update Fails**
+   - Check if user exists in database
+   - Verify required fields are provided
+   - Check database constraints and validation
+
+## Support
+
+For issues or questions:
+1. Check the logs for detailed error messages
+2. Verify environment variable configuration
+3. Test Redis and PostgreSQL connectivity
+4. Review JWT token validity and format

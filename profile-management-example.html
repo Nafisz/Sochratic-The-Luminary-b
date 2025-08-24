@@ -1,0 +1,588 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Profile Management Example</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .section {
+            margin-bottom: 30px;
+            padding: 20px;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #333;
+        }
+        input[type="text"], input[type="email"], textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-size: 14px;
+        }
+        textarea {
+            height: 100px;
+            resize: vertical;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-right: 10px;
+            margin-bottom: 10px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button.secondary {
+            background-color: #6c757d;
+        }
+        button.secondary:hover {
+            background-color: #545b62;
+        }
+        button.success {
+            background-color: #28a745;
+        }
+        button.success:hover {
+            background-color: #1e7e34;
+        }
+        button.danger {
+            background-color: #dc3545;
+        }
+        button.danger:hover {
+            background-color: #c82333;
+        }
+        .status {
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 5px;
+            font-weight: 500;
+        }
+        .status.online {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .status.offline {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .user-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .user-card {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            border: 1px solid #e9ecef;
+        }
+        .user-avatar {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background-color: #007bff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .response {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 15px;
+            white-space: pre-wrap;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border-color: #f5c6cb;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border-color: #c3e6cb;
+        }
+        .tabs {
+            display: flex;
+            margin-bottom: 20px;
+            border-bottom: 1px solid #dee2e6;
+        }
+        .tab {
+            padding: 10px 20px;
+            cursor: pointer;
+            border: none;
+            background: none;
+            color: #6c757d;
+        }
+        .tab.active {
+            color: #007bff;
+            border-bottom: 2px solid #007bff;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <h1>🚀 Profile Management System</h1>
+    <p>This example demonstrates how to use the Profile Management API with bio, profile photo, and online/offline status.</p>
+
+    <!-- Authentication Section -->
+    <div class="container">
+        <h2>🔐 Authentication</h2>
+        <div class="form-group">
+            <label for="jwtToken">JWT Token:</label>
+            <input type="text" id="jwtToken" placeholder="Enter your JWT token here" style="font-family: monospace;">
+        </div>
+        <button onclick="testAuth()">Test Authentication</button>
+        <div id="authResponse" class="response"></div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <div class="tabs">
+        <button class="tab active" onclick="showTab('profile')">Profile Management</button>
+        <button class="tab" onclick="showTab('status')">Online Status</button>
+        <button class="tab" onclick="showTab('users')">Online Users</button>
+        <button class="tab" onclick="showTab('heartbeat')">Heartbeat System</button>
+    </div>
+
+    <!-- Profile Management Tab -->
+    <div id="profile" class="tab-content active">
+        <div class="container">
+            <h2>👤 Profile Management</h2>
+            
+            <div class="section">
+                <h3>Get Current Profile</h3>
+                <button onclick="getProfile()">Get My Profile</button>
+                <div id="profileResponse" class="response"></div>
+            </div>
+
+            <div class="section">
+                <h3>Update Profile</h3>
+                <div class="form-group">
+                    <label for="bio">Bio:</label>
+                    <textarea id="bio" placeholder="Tell us about yourself..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="profilePhoto">Profile Photo URL:</label>
+                    <input type="text" id="profilePhoto" placeholder="https://example.com/photo.jpg">
+                </div>
+                <button onclick="updateProfile()">Update Profile</button>
+                <div id="updateResponse" class="response"></div>
+            </div>
+
+            <div class="section">
+                <h3>Upload Profile Photo</h3>
+                <div class="form-group">
+                    <label for="photoFile">Select Photo:</label>
+                    <input type="file" id="photoFile" accept="image/*">
+                    <small>Max size: 5MB, Formats: JPEG, PNG, WebP, GIF</small>
+                </div>
+                <button onclick="uploadPhoto()">Upload Photo</button>
+                <div id="uploadResponse" class="response"></div>
+            </div>
+
+            <div class="section">
+                <h3>Delete Profile Photo</h3>
+                <button class="danger" onclick="deletePhoto()">Delete Current Photo</button>
+                <div id="deleteResponse" class="response"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Online Status Tab -->
+    <div id="status" class="tab-content">
+        <div class="container">
+            <h2>🟢 Online Status Management</h2>
+            
+            <div class="section">
+                <h3>Current Status</h3>
+                <button onclick="getStatus()">Get My Status</button>
+                <div id="statusResponse" class="response"></div>
+            </div>
+
+            <div class="section">
+                <h3>Change Status</h3>
+                <button class="success" onclick="setOnline()">Go Online</button>
+                <button class="danger" onclick="setOffline()">Go Offline</button>
+                <div id="statusChangeResponse" class="response"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Online Users Tab -->
+    <div id="users" class="tab-content">
+        <div class="container">
+            <h2>👥 Online Users</h2>
+            
+            <div class="section">
+                <h3>View Online Users</h3>
+                <button onclick="getOnlineUsers()">Refresh Online Users</button>
+                <div id="onlineUsersResponse" class="response"></div>
+                <div id="onlineUsersList" class="user-list"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Heartbeat Tab -->
+    <div id="heartbeat" class="tab-content">
+        <div class="container">
+            <h2>💓 Heartbeat System</h2>
+            
+            <div class="section">
+                <h3>Manual Heartbeat</h3>
+                <button onclick="sendHeartbeat()">Send Heartbeat</button>
+                <div id="heartbeatResponse" class="response"></div>
+            </div>
+
+            <div class="section">
+                <h3>Auto Heartbeat</h3>
+                <button class="success" onclick="startAutoHeartbeat()">Start Auto Heartbeat</button>
+                <button class="danger" onclick="stopAutoHeartbeat()">Stop Auto Heartbeat</button>
+                <div id="autoHeartbeatStatus" class="status">Auto heartbeat: Stopped</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000/api';
+        let autoHeartbeatInterval = null;
+
+        // Tab switching
+        function showTab(tabName) {
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Remove active class from all tabs
+            document.querySelectorAll('.tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            document.getElementById(tabName).classList.add('active');
+            
+            // Add active class to clicked tab
+            event.target.classList.add('active');
+        }
+
+        // Helper function to make API calls
+        async function apiCall(endpoint, options = {}) {
+            const token = document.getElementById('jwtToken').value;
+            if (!token) {
+                throw new Error('JWT token is required');
+            }
+
+            const defaultOptions = {
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            };
+
+            const response = await fetch(`${API_BASE}${endpoint}`, {
+                ...defaultOptions,
+                ...options
+            });
+
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+
+            return await response.json();
+        }
+
+        // Test authentication
+        async function testAuth() {
+            try {
+                const response = await apiCall('/profile/profile');
+                document.getElementById('authResponse').innerHTML = JSON.stringify(response, null, 2);
+                document.getElementById('authResponse').className = 'response success';
+            } catch (error) {
+                document.getElementById('authResponse').innerHTML = `Error: ${error.message}`;
+                document.getElementById('authResponse').className = 'response error';
+            }
+        }
+
+        // Get profile
+        async function getProfile() {
+            try {
+                const response = await apiCall('/profile/profile');
+                document.getElementById('profileResponse').innerHTML = JSON.stringify(response, null, 2);
+                document.getElementById('profileResponse').className = 'response success';
+                
+                // Populate form fields if profile exists
+                if (response.success && response.data) {
+                    document.getElementById('bio').value = response.data.bio || '';
+                    document.getElementById('profilePhoto').value = response.data.profilePhoto || '';
+                }
+            } catch (error) {
+                document.getElementById('profileResponse').innerHTML = `Error: ${error.message}`;
+                document.getElementById('profileResponse').className = 'response error';
+            }
+        }
+
+        // Update profile
+        async function updateProfile() {
+            try {
+                const bio = document.getElementById('bio').value;
+                const profilePhoto = document.getElementById('profilePhoto').value;
+                
+                const response = await apiCall('/profile/profile', {
+                    method: 'PUT',
+                    body: JSON.stringify({ bio, profilePhoto })
+                });
+                
+                document.getElementById('updateResponse').innerHTML = JSON.stringify(response, null, 2);
+                document.getElementById('updateResponse').className = 'response success';
+            } catch (error) {
+                document.getElementById('updateResponse').innerHTML = `Error: ${error.message}`;
+                document.getElementById('updateResponse').className = 'response error';
+            }
+        }
+
+        // Upload profile photo
+        async function uploadPhoto() {
+            try {
+                const fileInput = document.getElementById('photoFile');
+                const file = fileInput.files[0];
+                
+                if (!file) {
+                    throw new Error('Please select a file');
+                }
+
+                const formData = new FormData();
+                formData.append('photo', file);
+
+                const response = await fetch(`${API_BASE}/profile/upload-photo`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${document.getElementById('jwtToken').value}`
+                    },
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                document.getElementById('uploadResponse').innerHTML = JSON.stringify(result, null, 2);
+                document.getElementById('uploadResponse').className = 'response success';
+                
+                // Update profile photo URL in form
+                if (result.success && result.data.profile.profilePhoto) {
+                    document.getElementById('profilePhoto').value = result.data.profile.profilePhoto;
+                }
+            } catch (error) {
+                document.getElementById('uploadResponse').innerHTML = `Error: ${error.message}`;
+                document.getElementById('uploadResponse').className = 'response error';
+            }
+        }
+
+        // Delete profile photo
+        async function deletePhoto() {
+            try {
+                const response = await fetch(`${API_BASE}/profile/delete-photo`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${document.getElementById('jwtToken').value}`
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const result = await response.json();
+                document.getElementById('deleteResponse').innerHTML = JSON.stringify(result, null, 2);
+                document.getElementById('deleteResponse').className = 'response success';
+                
+                // Clear profile photo URL in form
+                if (result.success) {
+                    document.getElementById('profilePhoto').value = '';
+                }
+            } catch (error) {
+                document.getElementById('deleteResponse').innerHTML = `Error: ${error.message}`;
+                document.getElementById('deleteResponse').className = 'response error';
+            }
+        }
+
+        // Get status
+        async function getStatus() {
+            try {
+                const response = await apiCall('/profile/status');
+                document.getElementById('statusResponse').innerHTML = JSON.stringify(response, null, 2);
+                document.getElementById('statusResponse').className = 'response success';
+            } catch (error) {
+                document.getElementById('statusResponse').innerHTML = `Error: ${error.message}`;
+                document.getElementById('statusResponse').className = 'response error';
+            }
+        }
+
+        // Set online
+        async function setOnline() {
+            try {
+                const response = await apiCall('/profile/status/online', {
+                    method: 'POST'
+                });
+                
+                document.getElementById('statusChangeResponse').innerHTML = JSON.stringify(response, null, 2);
+                document.getElementById('statusChangeResponse').className = 'response success';
+            } catch (error) {
+                document.getElementById('statusChangeResponse').innerHTML = `Error: ${error.message}`;
+                document.getElementById('statusChangeResponse').className = 'response error';
+            }
+        }
+
+        // Set offline
+        async function setOffline() {
+            try {
+                const response = await apiCall('/profile/status/offline', {
+                    method: 'POST'
+                });
+                
+                document.getElementById('statusChangeResponse').innerHTML = JSON.stringify(response, null, 2);
+                document.getElementById('statusChangeResponse').className = 'response success';
+            } catch (error) {
+                document.getElementById('statusChangeResponse').innerHTML = `Error: ${error.message}`;
+                document.getElementById('statusChangeResponse').className = 'response error';
+            }
+        }
+
+        // Get online users
+        async function getOnlineUsers() {
+            try {
+                const response = await apiCall('/profile/online-users');
+                document.getElementById('onlineUsersResponse').innerHTML = JSON.stringify(response, null, 2);
+                document.getElementById('onlineUsersResponse').className = 'response success';
+                
+                // Display users in cards
+                displayOnlineUsers(response.data || []);
+            } catch (error) {
+                document.getElementById('onlineUsersResponse').innerHTML = `Error: ${error.message}`;
+                document.getElementById('onlineUsersResponse').className = 'response error';
+            }
+        }
+
+        // Display online users
+        function displayOnlineUsers(users) {
+            const container = document.getElementById('onlineUsersList');
+            container.innerHTML = '';
+            
+            if (users.length === 0) {
+                container.innerHTML = '<p>No users online</p>';
+                return;
+            }
+            
+            users.forEach(user => {
+                const userCard = document.createElement('div');
+                userCard.className = 'user-card';
+                userCard.innerHTML = `
+                    <div class="user-avatar">${user.name.charAt(0).toUpperCase()}</div>
+                    <h4>${user.name}</h4>
+                    <p><strong>Username:</strong> ${user.username}</p>
+                    ${user.profilePhoto ? `<img src="${user.profilePhoto}" alt="Profile" style="width: 100%; height: 100px; object-fit: cover; border-radius: 5px;">` : ''}
+                `;
+                container.appendChild(userCard);
+            });
+        }
+
+        // Send heartbeat
+        async function sendHeartbeat() {
+            try {
+                const response = await apiCall('/profile/heartbeat', {
+                    method: 'POST'
+                });
+                
+                document.getElementById('heartbeatResponse').innerHTML = JSON.stringify(response, null, 2);
+                document.getElementById('heartbeatResponse').className = 'response success';
+            } catch (error) {
+                document.getElementById('heartbeatResponse').innerHTML = `Error: ${error.message}`;
+                document.getElementById('heartbeatResponse').className = 'response error';
+            }
+        }
+
+        // Start auto heartbeat
+        function startAutoHeartbeat() {
+            if (autoHeartbeatInterval) {
+                clearInterval(autoHeartbeatInterval);
+            }
+            
+            autoHeartbeatInterval = setInterval(async () => {
+                try {
+                    await apiCall('/profile/heartbeat', { method: 'POST' });
+                    document.getElementById('autoHeartbeatStatus').innerHTML = `Auto heartbeat: Running (${new Date().toLocaleTimeString()})`;
+                    document.getElementById('autoHeartbeatStatus').className = 'status online';
+                } catch (error) {
+                    document.getElementById('autoHeartbeatStatus').innerHTML = `Auto heartbeat: Error - ${error.message}`;
+                    document.getElementById('autoHeartbeatStatus').className = 'status offline';
+                }
+            }, 30000); // Every 30 seconds
+            
+            document.getElementById('autoHeartbeatStatus').innerHTML = 'Auto heartbeat: Started';
+            document.getElementById('autoHeartbeatStatus').className = 'status online';
+        }
+
+        // Stop auto heartbeat
+        function stopAutoHeartbeat() {
+            if (autoHeartbeatInterval) {
+                clearInterval(autoHeartbeatInterval);
+                autoHeartbeatInterval = null;
+            }
+            
+            document.getElementById('autoHeartbeatStatus').innerHTML = 'Auto heartbeat: Stopped';
+            document.getElementById('autoHeartbeatStatus').className = 'status offline';
+        }
+
+        // Initialize page
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log('Profile Management Example loaded');
+            
+            // Set a sample JWT token for testing (replace with real token)
+            document.getElementById('jwtToken').value = 'your-jwt-token-here';
+        });
+    </script>
+</body>
+</html>

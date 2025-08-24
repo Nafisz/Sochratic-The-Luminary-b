@@ -1,160 +1,250 @@
 const { PrismaClient } = require('@prisma/client');
+const Redis = require('ioredis');
+
+const prisma = new PrismaClient();
+const redis = new Redis({
+  host: process.env.REDIS_HOST || 'localhost',
+  port: process.env.REDIS_PORT || 6379,
+  retryDelayOnFailover: 100,
+  maxRetriesPerRequest: 3,
+});
 
 class ProfileService {
-  constructor(prisma) {
-    this.prisma = prisma || new PrismaClient();
+  // Update user bio and profile photo
+  async updateProfile(userId, { bio, profilePhoto }) {
+    try {
+      const updatedUser = await prisma.user.update({
+        where: { id: userId },
+        data: {
+          bio: bio || undefined,
+          profilePhoto: profilePhoto || undefined,
+          updatedAt: new Date(),
+        },
+        select: {
+          id: true,
+          name: true,
+          username: true,
+          email: true,
+          age: true,
+          bio: true,
+          profilePhoto: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      return {
+        success: true,
+        data: updatedUser,
+        message: 'Profile updated successfully',
+      };
+    } catch (error) {
+      console.error('Error updating profile:', error);
+      throw new Error('Failed to update profile');
+    }
   }
 
-  /**
-   * Get user profile by user ID
-   * @param {number} userId - User ID from JWT token
-   * @returns {Object} User profile data
-   */
-  async getUserProfile(userId) {
+  // Get user profile
+  async getProfile(userId) {
     try {
-      const user = await this.prisma.user.findUnique({ // ✅ Gunakan this.prisma
+      const user = await prisma.user.findUnique({
         where: { id: userId },
         select: {
           id: true,
           name: true,
           username: true,
-          age: true,
           email: true,
+          age: true,
+          bio: true,
+          profilePhoto: true,
           createdAt: true,
-          userIntelProgress: {
-            select: {
-              type: true,
-              exp: true,
-              level: true
-            }
-          }
-        }
+          updatedAt: true,
+        },
       });
 
       if (!user) {
         throw new Error('User not found');
       }
 
-      // Format the profile data
-      const profile = {
-        id: user.id,
-        name: user.name,
-        username: user.username,
-        age: user.age,
-        email: user.email,
-        createdAt: {
-          month: user.createdAt.getMonth() + 1,
-          year: user.createdAt.getFullYear()
-        },
-        intelligenceProgress: user.userIntelProgress
-      };
+      // Get online status from Redis
+      const isOnline = await this.getOnlineStatus(userId);
 
-      return profile;
+      return {
+        success: true,
+        data: {
+          ...user,
+          isOnline,
+        },
+      };
     } catch (error) {
-      throw new Error(`Failed to get user profile: ${error.message}`);
+      console.error('Error getting profile:', error);
+      throw new Error('Failed to get profile');
     }
   }
 
-  /**
-   * Update user profile
-   * @param {number} userId - User ID from JWT token
-   * @param {Object} updateData - Data to update
-   * @returns {Object} Updated user profile
-   */
-  async updateUserProfile(userId, updateData) {
+  // Set user online status
+  async setOnlineStatus(userId, isOnline = true) {
     try {
-      // Validate update data
-      const allowedFields = ['name', 'username', 'age'];
-      const filteredData = {};
+      const statusKey = `user:${userId}:status`;
+      const userListKey = 'online_users';
       
-      for (const field of allowedFields) {
-        if (updateData[field] !== undefined) {
-          filteredData[field] = updateData[field];
-        }
+      if (isOnline) {
+        // Set user as online with timestamp
+        await redis.setex(statusKey, 300, JSON.stringify({
+          status: 'online',
+          lastSeen: new Date().toISOString(),
+        }));
+        
+        // Add to online users list
+        await redis.sadd(userListKey, userId.toString());
+        
+        // Set expiry for online users list (cleanup after 5 minutes)
+        await redis.expire(userListKey, 300);
+      } else {
+        // Set user as offline
+        await redis.setex(statusKey, 86400, JSON.stringify({
+          status: 'offline',
+          lastSeen: new Date().toISOString(),
+        }));
+        
+        // Remove from online users list
+        await redis.srem(userListKey, userId.toString());
       }
 
-      if (Object.keys(filteredData).length === 0) {
-        throw new Error('No valid fields to update');
+      return {
+        success: true,
+        message: `User ${isOnline ? 'online' : 'offline'}`,
+      };
+    } catch (error) {
+      console.error('Error setting online status:', error);
+      throw new Error('Failed to set online status');
+    }
+  }
+
+  // Get user online status
+  async getOnlineStatus(userId) {
+    try {
+      const statusKey = `user:${userId}:status`;
+      const status = await redis.get(statusKey);
+      
+      if (!status) {
+        return false;
       }
 
-      // Check if username is already taken by another user
-      if (filteredData.username) {
-        const existingUser = await this.prisma.user.findFirst({ // ✅ Gunakan this.prisma
-          where: {
-            username: filteredData.username,
-            id: { not: userId }
-          }
-        });
+      const statusData = JSON.parse(status);
+      return statusData.status === 'online';
+    } catch (error) {
+      console.error('Error getting online status:', error);
+      return false;
+    }
+  }
 
-        if (existingUser) {
-          throw new Error('Username already taken');
-        }
+  // Get all online users
+  async getOnlineUsers() {
+    try {
+      const userListKey = 'online_users';
+      const onlineUserIds = await redis.smembers(userListKey);
+      
+      if (onlineUserIds.length === 0) {
+        return [];
       }
 
-      // Update user profile
-      const updatedUser = await this.prisma.user.update({ // ✅ Gunakan this.prisma
-        where: { id: userId },
-        data: filteredData,
+      // Get user details for online users
+      const onlineUsers = await prisma.user.findMany({
+        where: {
+          id: {
+            in: onlineUserIds.map(id => parseInt(id)),
+          },
+        },
         select: {
           id: true,
           name: true,
           username: true,
-          age: true,
-          email: true,
-          createdAt: true
-        }
+          profilePhoto: true,
+        },
       });
 
-      // Format the response
-      const profile = {
-        id: updatedUser.id,
-        name: updatedUser.name,
-        username: updatedUser.username,
-        age: updatedUser.age,
-        email: updatedUser.email,
-        createdAt: {
-          month: updatedUser.createdAt.getMonth() + 1,
-          year: updatedUser.createdAt.getFullYear()
-        }
-      };
-
-      return profile;
+      return onlineUsers;
     } catch (error) {
-      throw new Error(`Failed to update user profile: ${error.message}`);
+      console.error('Error getting online users:', error);
+      return [];
     }
   }
 
-  /**
-   * Get user statistics summary
-   * @param {number} userId - User ID from JWT token
-   * @returns {Object} User statistics
-   */
-  async getUserStats(userId) {
+  // Update last seen timestamp
+  async updateLastSeen(userId) {
     try {
-      const [sessionCount, totalExp, levelProgress] = await Promise.all([
-        this.prisma.session.count({ // ✅ Gunakan this.prisma
-          where: { userId, status: 'COMPLETED' }
-        }),
-        this.prisma.userIntelProgress.aggregate({ // ✅ Gunakan this.prisma
-          where: { userId },
-          _sum: { exp: true }
-        }),
-        this.prisma.userIntelProgress.findMany({ // ✅ Gunakan this.prisma
-          where: { userId },
-          select: { type: true, level: true, exp: true }
-        })
-      ]);
-
-      return {
-        totalSessions: sessionCount,
-        totalExperience: totalExp._sum.exp || 0,
-        intelligenceLevels: levelProgress
-      };
+      const statusKey = `user:${userId}:status`;
+      const currentStatus = await redis.get(statusKey);
+      
+      if (currentStatus) {
+        const statusData = JSON.parse(currentStatus);
+        if (statusData.status === 'online') {
+          // Update last seen for online users
+          await redis.setex(statusKey, 300, JSON.stringify({
+            ...statusData,
+            lastSeen: new Date().toISOString(),
+          }));
+        }
+      }
     } catch (error) {
-      throw new Error(`Failed to get user stats: ${error.message}`);
+      console.error('Error updating last seen:', error);
+    }
+  }
+
+  // Cleanup expired online statuses
+  async cleanupExpiredStatuses() {
+    try {
+      const userListKey = 'online_users';
+      const onlineUserIds = await redis.smembers(userListKey);
+      
+      for (const userId of onlineUserIds) {
+        const statusKey = `user:${userId}:status`;
+        const status = await redis.get(statusKey);
+        
+        if (!status) {
+          // Remove from online users if status doesn't exist
+          await redis.srem(userListKey, userId);
+        }
+      }
+    } catch (error) {
+      console.error('Error cleaning up expired statuses:', error);
+    }
+  }
+
+  // Get user status with last seen
+  async getUserStatus(userId) {
+    try {
+      const statusKey = `user:${userId}:status`;
+      const status = await redis.get(statusKey);
+      
+      if (!status) {
+        return {
+          status: 'offline',
+          lastSeen: null,
+        };
+      }
+
+      return JSON.parse(status);
+    } catch (error) {
+      console.error('Error getting user status:', error);
+      return {
+        status: 'offline',
+        lastSeen: null,
+      };
+    }
+  }
+
+  // Heartbeat to keep user online
+  async heartbeat(userId) {
+    try {
+      await this.updateLastSeen(userId);
+      return { success: true, message: 'Heartbeat received' };
+    } catch (error) {
+      console.error('Error processing heartbeat:', error);
+      throw new Error('Failed to process heartbeat');
     }
   }
 }
 
-// Export class, bukan instance
 module.exports = ProfileService;

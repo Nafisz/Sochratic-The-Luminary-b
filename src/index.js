@@ -17,12 +17,16 @@ const expRoutes     = require('./routes/expRoutes');
 const sessionRoutes = require('./routes/sessionRoutes');
 const topicRoutes   = require('./routes/topicRoutes');
 const protectedRoutes = require('./routes/protectedRoutes');
-const profileRoutes = require('./routes/profileRoutes');
+const ProfileService = require('./services/profileService');
 
 // ── Instance setup ------------------------------------------------
 const app    = express();
 const prisma = new PrismaClient();
-const redis  = createClient({ url: process.env.REDIS_URL || 'redis://redis:6379' });
+const redis  = createClient({ 
+  url: process.env.REDIS_URL || 'redis://localhost:6379',
+  host: process.env.REDIS_HOST || 'localhost',
+  port: process.env.REDIS_PORT || 6379
+});
 
 // ── Middleware ----------------------------------------------------
 // Konfigurasi CORS untuk mengizinkan frontend dari folder berbeda
@@ -48,6 +52,9 @@ const corsOptions = {
 
 app.use(cors(corsOptions));
 app.use(express.json());
+
+// Serve static files (profile photos)
+app.use('/uploads', express.static('uploads'));
 
 // Middleware untuk logging request (berguna untuk debugging)
 app.use((req, res, next) => {
@@ -119,7 +126,7 @@ app.use('/api/exp',     expRoutes(prisma));
 app.use('/api/session', sessionRoutes(prisma));
 app.use('/api/topic',   topicRoutes(prisma));
 app.use('/api/protected', protectedRoutes(prisma));
-app.use('/api/profile', profileRoutes(prisma));
+app.use('/api/profile', require('./routes/profileRoutes'));
 app.use('/api/payment', payment.router);
 
 // ── Boot ----------------------------------------------------------
