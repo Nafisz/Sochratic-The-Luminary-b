@@ -2,19 +2,19 @@ const jwt = require('jsonwebtoken');
 
 // Middleware untuk verifikasi JWT token
 const authenticateToken = (req, res, next) => {
-  console.log('🔐 === AUTHENTICATE TOKEN MIDDLEWARE ===');
-  console.log('📅 Timestamp:', new Date().toISOString());
-  console.log(' Path:', req.path);
-  console.log(' Method:', req.method);
-  console.log(' Origin:', req.headers.origin);
-  console.log(' All headers:', req.headers);
+  // console.log('🔐 === AUTHENTICATE TOKEN MIDDLEWARE ===');
+  // console.log('📅 Timestamp:', new Date().toISOString());
+  // console.log(' Path:', req.path);
+  // console.log(' Method:', req.method);
+  // console.log(' Origin:', req.headers.origin);
+  // console.log(' All headers:', req.headers);
   
   const authHeader = req.headers['authorization'];
   const token = authHeader && authHeader.split(' ')[1]; // Bearer TOKEN
   
-  console.log('🎫 Auth header:', authHeader);
-  console.log('�� Token:', token);
-  console.log('🔑 JWT_SECRET exists:', !!process.env.JWT_SECRET);
+  // console.log('🎫 Auth header:', authHeader);
+  // console.log('�� Token:', token);
+  // console.log('🔑 JWT_SECRET exists:', !!process.env.JWT_SECRET);
 
   if (!token) {
     console.log('❌ No token provided - returning 401');

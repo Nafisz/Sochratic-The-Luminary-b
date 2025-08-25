@@ -3,13 +3,13 @@ const express = require('express');
 const router = express.Router();
 const ProfileService = require('../services/profileService');
 const FileUploadService = require('../services/fileUploadService');
-const jwtMiddleware = require('../middleware/jwtMiddleware');
+const { authenticateToken } = require('../middleware/jwtMiddleware');
 
 const profileService = new ProfileService();
 const fileUploadService = new FileUploadService();
 
 // Apply JWT middleware to all profile routes
-router.use(jwtMiddleware);
+router.use(authenticateToken);
 
 // Get user profile
 router.get('/profile', async (req, res) => {

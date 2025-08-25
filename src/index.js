@@ -24,8 +24,6 @@ const app    = express();
 const prisma = new PrismaClient();
 const redis  = createClient({ 
   url: process.env.REDIS_URL || 'redis://localhost:6379',
-  host: process.env.REDIS_HOST || 'localhost',
-  port: process.env.REDIS_PORT || 6379
 });
 
 // ── Middleware ----------------------------------------------------
@@ -57,10 +55,12 @@ app.use(express.json());
 app.use('/uploads', express.static('uploads'));
 
 // Middleware untuk logging request (berguna untuk debugging)
-app.use((req, res, next) => {
-  console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - Origin: ${req.headers.origin || 'Unknown'}`);
-  next();
-});
+if (process.env.NODE_ENV !== 'production') {
+  app.use((req, res, next) => {
+    console.log(`${new Date().toISOString()} - ${req.method} ${req.path} - Origin: ${req.headers.origin || 'Unknown'}`);
+    next();
+  });
+}
 
 // ── Connect Redis -------------------------------------------------
 redis.connect().catch(console.error);

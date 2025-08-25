@@ -2,12 +2,7 @@ const { PrismaClient } = require('@prisma/client');
 const Redis = require('ioredis');
 
 const prisma = new PrismaClient();
-const redis = new Redis({
-  host: process.env.REDIS_HOST || 'localhost',
-  port: process.env.REDIS_PORT || 6379,
-  retryDelayOnFailover: 100,
-  maxRetriesPerRequest: 3,
-});
+const redis = new Redis(process.env.REDIS_URL);
 
 class ProfileService {
   // Update user bio and profile photo
